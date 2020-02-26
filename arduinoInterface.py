@@ -7,7 +7,7 @@ import time
 
 
 
-### connect() ###
+### connect("TOP", 4) ###
 # Each pump requires verification of the cable it is contolling (top, lhs, or rhs).
 # Pumps will function normally when the pumpName sent here matches the name hardcoded 
 # on each arduino.
@@ -36,7 +36,7 @@ def connect(pumpName, portNumber) :
 
 
 
-### listenSteps() ###
+### listenSteps(serialConnection) ###
 # This function receives the step count sent from the arduino
 def listenSteps(ser):
     message = "S"
