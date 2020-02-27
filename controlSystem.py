@@ -1,5 +1,5 @@
 from arduinoInterface import connect, listenSteps, listenPress
-from kinematics import cableLengths
+from kinematics import cableLengths, length2Vol
 
 # top = connect("TOP", 4)
 # lhs = connect("LHS", 5)
@@ -12,9 +12,13 @@ from kinematics import cableLengths
 #     print(rhsSteps)
 #     i+=1
 
-[cableL, cableR, cableT] = cableLengths(15, 8.6603)
+[cableL, cableR, cableT] = cableLengths(25, 14.43)
 print(cableL, cableR, cableT)
+
+volume = length2Vol(cableT)
+print(volume)
 
 # top.close()
 # lhs.close()
 # rhs.close()
+
