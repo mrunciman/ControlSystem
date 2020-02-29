@@ -9,23 +9,31 @@ from numpy import linalg as la
 import math as mt
 
 # Define parameters of system:
-# Side length of equilateral triangle in m
+# Side length of equilateral triangle in mm
 S = 50
 # 'Flat' muscle length:
 L0 = S/(1 - 2/mt.pi)
-# Width of hydraulic muscle in m
+# Excess length of cable between entry point and muscle, in mm
+Lx = 10
+# Total length of cable in flat/resting state
+Lt = L0 + Lx + S
+# print(Lt)
+# Width of hydraulic muscle in mm
 W = 30
 # Number of length subdivisions
-numLs = 5
+numLs = 10
 
 # Lookup array of equally spaced theta values in interval 0 to pi/2
-numPoints = 100
+numPoints = 1000
 theta = np.linspace(0, mt.pi/2, numPoints)
-# Lookup array of cable lengths, using normalised sinc function so divide by pi.
-# This avoids divide by zero errors wnen computing np.sin(x)/x
+# Lookup array of cable contractions/length changes.
+# Using normalised sinc function so divide by pi, as this
+# avoids divide by zero errors when computing np.sin(x)/x
 cableLookup = L0*(1 - np.sinc(theta/mt.pi))
+# print(cableLookup)
 
-
+# Syringe cross sectional area, diameter = 30 mm
+As = mt.pi*30**2
 
 def cableLengths(x, y):
     """ Function finds cable lengths in mm from entry points to end effector
@@ -71,17 +79,31 @@ def cableLengths(x, y):
 
 def length2Vol (lengthCable):
     """
-    Function returns required volume in muscle to reach desired length.
+    Function returns required volume in ml in muscle to reach desired length,
+    as well as displacement from 0 position on linear actuator.
     Uses lookup table/interpolation to approximate inverse of sin(theta)/theta
     for required length, given contractedL = flatL times sin(theta)/theta
     e.g. length2Vol(17.32)
     """
+    Lc = S - lengthCable
     # Use lookup tables defined above to find theta angle based on input length
-    angle = np.interp(lengthCable, cableLookup, theta)
+    angle = np.interp(Lc, cableLookup, theta)
     # Calculate normalised volume of a beam of arbitrary size
     normV = (angle - mt.cos(angle)*mt.sin(angle))/(angle**2)
     # print(normV)
     # For real volume calc, there are numLs beams of length L0/numLs
     factV = numLs*(W*(L0/numLs)**2)/2
     volume = normV*factV
-    return volume
+    lengthSyringe = volume/As
+    volume = volume / 1000
+    return volume, lengthSyringe
+
+# Add length2step count function?
+# Control frequency of interrupts to control speed? 
+# 'Gearing' using microstepping
+
+# Function taking target point and time to reach it, can be called recursively or called with a list of targets and times
+
+# Function taking input point from master over set time period and finding target speed.
+# Use target speed to find necessary rate of cable length changes (qdot).
+# TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE

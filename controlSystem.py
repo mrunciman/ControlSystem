@@ -12,11 +12,16 @@ from kinematics import cableLengths, length2Vol
 #     print(rhsSteps)
 #     i+=1
 
-[cableL, cableR, cableT] = cableLengths(25, 14.43)
+[cableL, cableR, cableT] = cableLengths(25, 25*0.5774)
 print(cableL, cableR, cableT)
 
-volume = length2Vol(cableT)
-print(volume)
+[volumeL, lengthL] = length2Vol(cableL)
+[volumeR, lengthR] = length2Vol(cableR)
+[volumeT, lengthT] = length2Vol(cableT)
+print(volumeL, lengthL)
+print(volumeR, lengthR)
+print(volumeT, lengthT)
+
 
 # top.close()
 # lhs.close()
