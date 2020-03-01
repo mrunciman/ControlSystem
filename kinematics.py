@@ -107,3 +107,16 @@ def length2Vol (lengthCable):
 # Function taking input point from master over set time period and finding target speed.
 # Use target speed to find necessary rate of cable length changes (qdot).
 # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
+def path (cX, cY, tX, tY, tV, tElapsed):
+    """
+    tX is target X, cX is current X.
+    Multiply average speed by 
+    """
+    diffX = tX - cX
+    diffY = tY - cY
+    xDot = (tV*diffX/abs(diffX**2-diffY**2))
+    yDot = (tV*diffY/abs(diffX**2-diffY**2))
+    instX = xDot*tElapsed + cX
+    instY = yDot*tElapsed + cY
+
+    return instX, instY, xDot, yDot
