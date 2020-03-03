@@ -1,5 +1,18 @@
+"""
+Read in new position from master
+Calculate cable lengths at target.
+Calcuate target volumes at target.
+Calculate desired velocity to reach position in given time
+    Use Time equal to reciprocal of master sampling frequency
+Calculate rate of cable length change
+    Use J and pseudoinverse of J
+Calculate rate of volume change (volume flow rate)
+Calculate speed of each pump piston
+Set step frequency of individual pumps to alter speed
+"""
+
 from arduinoInterface import connect, listenSteps, listenPress
-from kinematics import cableLengths, length2Vol
+from kinematics import cableLengths, length2Vol, cableSpeeds
 
 # top = connect("TOP", 4)
 # lhs = connect("LHS", 5)
@@ -12,15 +25,22 @@ from kinematics import cableLengths, length2Vol
 #     print(rhsSteps)
 #     i+=1
 
-[cableL, cableR, cableT] = cableLengths(25, 25*0.5774)
-print(cableL, cableR, cableT)
+# currentP = [25, 14.435]
+currentP = [25, 0]
+targetP = [26, 0]
 
-[volumeL, lengthL] = length2Vol(cableL)
-[volumeR, lengthR] = length2Vol(cableR)
-[volumeT, lengthT] = length2Vol(cableT)
-print(volumeL, lengthL)
-print(volumeR, lengthR)
-print(volumeT, lengthT)
+
+[cableL, cableR, cableT, Jpinv] = cableLengths(currentP[0], currentP[1])
+print(cableL, cableR, cableT)
+[volumeL, linearL] = length2Vol(cableL)
+[volumeR, linearR] = length2Vol(cableR)
+[volumeT, linearT] = length2Vol(cableT)
+print(volumeL, linearL)
+print(volumeR, linearR)
+print(volumeT, linearT)
+
+[lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], Jpinv)
+print(lhsV, rhsV, topV)
 
 
 # top.close()

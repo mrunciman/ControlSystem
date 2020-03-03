@@ -8,6 +8,9 @@ import numpy as np
 from numpy import linalg as la
 import math as mt
 
+##############################################################
+# Structure and actuators
+##############################################################
 # Define parameters of system:
 # Side length of equilateral triangle in mm
 S = 50
@@ -22,7 +25,12 @@ Lt = L0 + Lx + S
 W = 30
 # Number of length subdivisions
 numLs = 10
+# Syringe cross sectional area, diameter = 30 mm
+As = mt.pi*(15**2)
 
+###################################################################
+# Lookup table
+###################################################################
 # Lookup array of equally spaced theta values in interval 0 to pi/2
 numPoints = 1000
 theta = np.linspace(0, mt.pi/2, numPoints)
@@ -32,13 +40,18 @@ theta = np.linspace(0, mt.pi/2, numPoints)
 cableLookup = L0*(1 - np.sinc(theta/mt.pi))
 # print(cableLookup)
 
-# Syringe cross sectional area, diameter = 30 mm
-As = mt.pi*30**2
+###################################################################
+# Master Controller
+###################################################################
+fSamp = 20 #Hz
 
 def cableLengths(x, y):
     """ Function finds cable lengths in mm from entry points to end effector
     given an input point (x, y) in mm.
-    e.g. [cableL, cableR, cableT] = cableLengths(15, 8.6603)
+    Also returns pseudoinverse of Jacobian for new point.
+    Jacobian is transpose of pose dependent structure matrix
+    structure matrix.
+    e.g. [cableL, cableR, cableT, Jplus] = cableLengths(15, 8.6603)
     """
     # x and y define the desired point on the plane in mm.
     # x = x/1000
@@ -49,6 +62,7 @@ def cableLengths(x, y):
     a = 0
     # Rotation matrix of instrument wrt global frame, assuming no pitch or roll
     # For transformation from base orientation to conventional instrument frame, add further rotation
+    # This is an input
     RotGI = np.array([[mt.cos(a), -mt.sin(a), 0], [mt.sin(a), mt.cos(a), 0], [0, 0, 1]])
 
     # r (radius) is radius of end effector
@@ -59,21 +73,57 @@ def cableLengths(x, y):
     # P is the desired position on plane
     P = np.array([[x], [y], [0]])
 
-    # Find desired point in global frame
+    # Find cable attachment points in global frame
     PGI = np.dot(RotGI, attP) + P
+    # print(PGI)
     
     # Entry point array - defines global frame at lhs corner (from behind instrument)
     # LHS, RHS, TOP corner coordinates, corners of equilateral of side S
     E = np.array([[0, 0, 0], [S, 0, 0], [0.5*S, S*mt.sin(mt.pi/3), 0]])
     E = np.transpose(E)
-    # Result is 3x3 matrix, norms of columns are lengths
-    R = E - PGI
-    # print(R)
+    # Result is 3x3 matrix of vectors in global frame pointing from attachment points to
+    # entry points, norms of columns are cable lengths
+    L = E - PGI
+    lhsCable = la.norm(L[:,0])
+    rhsCable = la.norm(L[:,1])
+    topCable = la.norm(L[:,2])
+    # print(L)
 
-    lhsCable = la.norm(R[:,0])
-    rhsCable = la.norm(R[:,1])
-    topCable = la.norm(R[:,2])
-    return lhsCable, rhsCable, topCable
+    # Compute the structure matrix A from cable unit vectors and cable attachment points 
+    # in global frame, PGI
+    # Find cable unit vectors
+    u1 = L[:,0]/lhsCable
+    u2 = L[:,1]/rhsCable
+    u3 = L[:,2]/topCable
+    u = np.array([u1, u2, u3])
+    u = np.transpose(u)
+    # print(u)
+    # Find cross products of cable unit vectors and attachment points
+    pCrossU1 = np.cross(PGI[:,0], u1)
+    pCrossU2 = np.cross(PGI[:,1], u2)
+    pCrossU3 = np.cross(PGI[:,2], u3)
+    pCrossU = np.array([pCrossU1, pCrossU2, pCrossU3])
+    pCrossU = np.transpose(pCrossU)
+    # print(pCrossU)
+
+################################################################################################
+# THIS IS CALCULATING JACOBIAN FOR NEW POINT, NOT CURRENT POINT
+
+    # Construct Jacobian from transpose of structure matrix
+    Jacobian = np.concatenate((u, pCrossU), axis = 0)
+    # print("Jacobian matrix is \n", Jacobian)
+    # print(Jacobian[0:2,:])
+    # Use only top two rows to 
+    Jplus = np.linalg.pinv(Jacobian[0:2,:])
+    # print(Jplus)
+    # speeds = np.array([0,10*0.5774,3,4,5,6])
+    # speeds = np.transpose(speeds)
+    # print(np.dot(Jplus, speeds[0:2]))
+    
+    # rank(A) # Check for singular configuration
+    # If rank(A) < no controlled DOFs, A is singular
+
+    return lhsCable, rhsCable, topCable, Jplus
 
 
 
@@ -99,7 +149,7 @@ def length2Vol (lengthCable):
     return volume, lengthSyringe
 
 # Add length2step count function?
-# Control frequency of interrupts to control speed? 
+# Control frequency of interrupts to control speed
 # 'Gearing' using microstepping
 
 # Function taking target point and time to reach it, can be called recursively or called with a list of targets and times
@@ -107,16 +157,29 @@ def length2Vol (lengthCable):
 # Function taking input point from master over set time period and finding target speed.
 # Use target speed to find necessary rate of cable length changes (qdot).
 # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
-def path (cX, cY, tX, tY, tV, tElapsed):
+
+def cableSpeeds (cX, cY, tX, tY, JacoPlus):
     """
     tX is target X, cX is current X.
-    Multiply average speed by 
+    Desired speed in X and Y found by multiplying difference 
+    by sampling frequency of master. JacoPlus is pseudoinverse of
+    Jacobian at a given point.
     """
     diffX = tX - cX
+    tVx =  diffX*fSamp
     diffY = tY - cY
-    xDot = (tV*diffX/abs(diffX**2-diffY**2))
-    yDot = (tV*diffY/abs(diffX**2-diffY**2))
-    instX = xDot*tElapsed + cX
-    instY = yDot*tElapsed + cY
+    tVy = diffY*fSamp
+    v = np.array([[tVx],[tVy]])
+    print(v)
+    cableRates = np.dot(JacoPlus, v)
+    lhsSpeed = cableRates[0]
+    rhsSpeed = cableRates[1]
+    topSpeed = cableRates[2]
 
-    return instX, instY, xDot, yDot
+    # tV = abs(tVx**2 + tVy**2)
+    # xDot = (tV*diffX/abs(diffX**2 + diffY**2))
+    # yDot = (tV*diffY/abs(diffX**2 + diffY**2))
+    # instX = xDot*tElapsed + cX
+    # instY = yDot*tElapsed + cY
+
+    return lhsSpeed, rhsSpeed, topSpeed
