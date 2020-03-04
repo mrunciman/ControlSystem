@@ -1,7 +1,7 @@
 """
 Read in new position from master
 Calculate cable lengths at target.
-Calcuate target volumes at target.
+Calcuate volumes at target.
 Calculate desired velocity to reach position in given time
     Use Time equal to reciprocal of master sampling frequency
 Calculate rate of cable length change
@@ -12,7 +12,7 @@ Set step frequency of individual pumps to alter speed
 """
 
 from arduinoInterface import connect, listenSteps, listenPress
-from kinematics import cableLengths, length2Vol, cableSpeeds
+from kinematics import cableLengths, length2Vol, volRate, cableSpeeds
 
 # top = connect("TOP", 4)
 # lhs = connect("LHS", 5)
@@ -25,22 +25,25 @@ from kinematics import cableLengths, length2Vol, cableSpeeds
 #     print(rhsSteps)
 #     i+=1
 
-# currentP = [25, 14.435]
-currentP = [25, 0]
-targetP = [26, 0]
+currentP = [25, 14.435]
+# currentP = [25, 0]
+targetP = [26, 14.435]
 
 
-[cableL, cableR, cableT, Jpinv] = cableLengths(currentP[0], currentP[1])
+[cableL, cableR, cableT, cJpinv] = cableLengths(currentP[0], currentP[1])
+[targetL, targetR, targetT, tJpinv] = cableLengths(targetP[0], targetP[1])
 print(cableL, cableR, cableT)
-[volumeL, linearL] = length2Vol(cableL)
-[volumeR, linearR] = length2Vol(cableR)
-[volumeT, linearT] = length2Vol(cableT)
-print(volumeL, linearL)
-print(volumeR, linearR)
-print(volumeT, linearT)
 
-[lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], Jpinv)
+[vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL] = volRate(cableL, targetL)
+[vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR] = volRate(cableR, targetR)
+[vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT] = volRate(cableT, targetT)
+print(vDotL, dDotL, fStepL) #vCL, vTL)
+print(vDotR, dDotR, fStepR) #vCR, vTR)
+print(vDotT, dDotT, fStepT) #vCT, vTT)
+
+[lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], cJpinv)
 print(lhsV, rhsV, topV)
+
 
 
 # top.close()

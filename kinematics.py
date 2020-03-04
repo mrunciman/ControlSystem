@@ -28,6 +28,16 @@ numLs = 10
 # Syringe cross sectional area, diameter = 30 mm
 As = mt.pi*(15**2)
 
+# For step count:
+# Mapping from step to 1 revolution = 200 steps
+# 32 microsteps per step, so 6400 steps per revolution
+# Set M0, M1, M2 to set microstep size
+# Lead = start*pitch , Lead screw is 4 start, 2 mm pitch, therefore Lead = 8
+# Steps/mm = (StepPerRev*Microsteps)/(Lead) 
+#          = 200*32/8 = 800 steps/mm
+# For speed: pulses/mm * mm/s = pulses/s
+stepsPMM = 800 # steps per mm
+
 ###################################################################
 # Lookup table
 ###################################################################
@@ -38,12 +48,17 @@ theta = np.linspace(0, mt.pi/2, numPoints)
 # Using normalised sinc function so divide by pi, as this
 # avoids divide by zero errors when computing np.sin(x)/x
 cableLookup = L0*(1 - np.sinc(theta/mt.pi))
+# d/dt(sinc(t)) = (t*cos(t)-sin(t))/t**2
 # print(cableLookup)
 
 ###################################################################
 # Master Controller
 ###################################################################
-fSamp = 20 #Hz
+fSamp = 20 # Hz
+speedLimit = 25 # mm/s
+
+
+
 
 def cableLengths(x, y):
     """ Function finds cable lengths in mm from entry points to end effector
@@ -141,45 +156,75 @@ def length2Vol (lengthCable):
     # Calculate normalised volume of a beam of arbitrary size
     normV = (angle - mt.cos(angle)*mt.sin(angle))/(angle**2)
     # print(normV)
-    # For real volume calc, there are numLs beams of length L0/numLs
+    # Real volume calc: there are numLs beams of length L0/numLs
     factV = numLs*(W*(L0/numLs)**2)/2
     volume = normV*factV
-    lengthSyringe = volume/As
+    # Find distance syringe pump has to move to reach desired volume
+    lengthSyringe = volume/As   # Convert to stepCount?
+    # Convert from mm^3 to ml
     volume = volume / 1000
     return volume, lengthSyringe
 
-# Add length2step count function?
+
+def volRate(cCable, tCable):
+    # Find current and target volume and displacement of syringe
+    [cV, cD] = length2Vol(cCable)
+    [tV, tD] = length2Vol(tCable)
+    # Use sampling frequency
+    vDot = (tV-cV)*fSamp
+    dDot = 1000*vDot/As
+
+    # For step count:
+    # Mapping from step to 1 revolution = 200 steps
+    # 32 microsteps per step, so 6400 steps per revolution
+    # Set M0, M1, M2 to set microstep size
+    # Lead = start*pitch , Lead screw is 4 start, 2 mm pitch, therefore Lead = 8
+    # Steps/mm = (StepPerRev*Microsteps)/(Lead) 
+    #          = 200*32/8 = 800 steps/mm
+    # For speed: pulses/mm * mm/s = pulses/s
+    fStep = stepsPMM*dDot
+
+    return vDot, dDot, fStep, cV, tV, cD, tD
+
 # Control frequency of interrupts to control speed
-# 'Gearing' using microstepping
 
-# Function taking target point and time to reach it, can be called recursively or called with a list of targets and times
-
-# Function taking input point from master over set time period and finding target speed.
-# Use target speed to find necessary rate of cable length changes (qdot).
-# TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
 
 def cableSpeeds (cX, cY, tX, tY, JacoPlus):
     """
+    Returns required cable length change rates to reach target
+    from current point within master sampling period.
     tX is target X, cX is current X.
     Desired speed in X and Y found by multiplying difference 
     by sampling frequency of master. JacoPlus is pseudoinverse of
     Jacobian at a given point.
     """
+    # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS
+    # USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
     diffX = tX - cX
     tVx =  diffX*fSamp
     diffY = tY - cY
     tVy = diffY*fSamp
+    vMag = mt.sqrt(tVx**2 + tVy**2)
+    # Check if point can be reached without exceeding speed limit.
+    # Scale back velocity to speed limit and calculate actual position.
+    if vMag > speedLimit:
+        # Calculate unit velocity vector and multiply by 
+        # limit to scale down
+        tVx = (tVx/vMag)*speedLimit
+        tVy = (tVy/vMag)*speedLimit
+        # Find actual position after movement
+        # actX = cX + (diffX*speedLimit/mt.sqrt(diffX**2 + diffY**2))/fSamp
+        # actY = cY + (diffY*speedLimit/mt.sqrt(diffX**2 + diffY**2))/fSamp
+        # print(actX, actY)
     v = np.array([[tVx],[tVy]])
-    print(v)
+    # vMag = mt.sqrt(tVx**2 + tVy**2)
+    # print(vMag)
+
+    # IK premultiplying input end effector velocity vector with pseudoinverse J
+    # to yield joint velocities.
     cableRates = np.dot(JacoPlus, v)
-    lhsSpeed = cableRates[0]
+    lhsSpeed = cableRates[0] # These are all array type still
     rhsSpeed = cableRates[1]
     topSpeed = cableRates[2]
-
-    # tV = abs(tVx**2 + tVy**2)
-    # xDot = (tV*diffX/abs(diffX**2 + diffY**2))
-    # yDot = (tV*diffY/abs(diffX**2 + diffY**2))
-    # instX = xDot*tElapsed + cX
-    # instY = yDot*tElapsed + cY
 
     return lhsSpeed, rhsSpeed, topSpeed
