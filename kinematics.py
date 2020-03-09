@@ -167,12 +167,18 @@ def length2Vol (lengthCable):
 
 
 def volRate(cCable, tCable):
+    """
+    Makes linear approximation of volume rate.
+    Returns volume rate in mm^3/s, syringe speed in mm/s, pulse frequency 
+    in Hz. Current and target volumes and syringe displacements are also returned.
+    """
+    # USE CABLE SPEED AND INITIAL CABLE LENGTH AS INPUT?
     # Find current and target volume and displacement of syringe
     [cV, cD] = length2Vol(cCable)
     [tV, tD] = length2Vol(tCable)
     # Use sampling frequency
     vDot = (tV-cV)*fSamp
-    dDot = 1000*vDot/As
+    dDot = 1000*vDot/As # mm^3/s
 
     # For step count:
     # Mapping from step to 1 revolution = 200 steps

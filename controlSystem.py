@@ -25,24 +25,27 @@ from kinematics import cableLengths, length2Vol, volRate, cableSpeeds
 #     print(rhsSteps)
 #     i+=1
 
-currentP = [25, 14.435]
-# currentP = [25, 0]
-targetP = [26, 14.435]
+# currentP = [25, 14.435]
+currentP = [25, 13]
+targetP = [25.5, 13.5]
 
 
 [cableL, cableR, cableT, cJpinv] = cableLengths(currentP[0], currentP[1])
 [targetL, targetR, targetT, tJpinv] = cableLengths(targetP[0], targetP[1])
-print(cableL, cableR, cableT)
+print("Cable lengths: ", cableL, cableR, cableT)
 
+# vDot is volume rate in mm3/s, dDot is syringe speed in mm/s, 
+# fStep is step frequency to move at dDot mm/s, vC is current volume
+# vT is target volume, dC and dT are current and target syringe displacements
 [vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL] = volRate(cableL, targetL)
 [vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR] = volRate(cableR, targetR)
 [vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT] = volRate(cableT, targetT)
-print(vDotL, dDotL, fStepL) #vCL, vTL)
+print("Volume rate, syringe speed and pulse freq: \n", vDotL, dDotL, fStepL) #vCL, vTL)
 print(vDotR, dDotR, fStepR) #vCR, vTR)
 print(vDotT, dDotT, fStepT) #vCT, vTT)
 
-[lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], cJpinv)
-print(lhsV, rhsV, topV)
+[lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], tJpinv)
+print("Cable speeds: ", lhsV, rhsV, topV)
 
 
 
