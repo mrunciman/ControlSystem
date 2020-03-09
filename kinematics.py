@@ -107,7 +107,7 @@ def cableLengths(x, y):
     # Compute the structure matrix A from cable unit vectors and cable attachment points 
     # in global frame, PGI
     # Find cable unit vectors
-    u1 = L[:,0]/lhsCable
+    u1 = L[:,0]/lhsCable    ### FILTER OUT ZERO LENGTH ERRORS
     u2 = L[:,1]/rhsCable
     u3 = L[:,2]/topCable
     u = np.array([u1, u2, u3])
@@ -154,7 +154,7 @@ def length2Vol (lengthCable):
     # Use lookup tables defined above to find theta angle based on input length
     angle = np.interp(Lc, cableLookup, theta)
     # Calculate normalised volume of a beam of arbitrary size
-    normV = (angle - mt.cos(angle)*mt.sin(angle))/(angle**2)
+    normV = (angle - mt.cos(angle)*mt.sin(angle))/(angle**2)    ### FILTER OUT ANGLE = 0 ERRORS
     # print(normV)
     # Real volume calc: there are numLs beams of length L0/numLs
     factV = numLs*(W*(L0/numLs)**2)/2
@@ -166,7 +166,7 @@ def length2Vol (lengthCable):
     return volume, lengthSyringe
 
 
-def volRate(cCable, tCable):
+def volRate(cCable, tCable, timeSecs):
     """
     Makes linear approximation of volume rate.
     Returns volume rate in mm^3/s, syringe speed in mm/s, pulse frequency 
@@ -177,7 +177,7 @@ def volRate(cCable, tCable):
     [cV, cD] = length2Vol(cCable)
     [tV, tD] = length2Vol(tCable)
     # Use sampling frequency
-    vDot = (tV-cV)*fSamp
+    vDot = (tV-cV)/timeSecs
     dDot = 1000*vDot/As # mm^3/s
 
     # For step count:
@@ -195,7 +195,7 @@ def volRate(cCable, tCable):
 # Control frequency of interrupts to control speed
 
 
-def cableSpeeds (cX, cY, tX, tY, JacoPlus):
+def cableSpeeds (cX, cY, tX, tY, JacoPlus, timeSecs):
     """
     Returns required cable length change rates to reach target
     from current point within master sampling period.
@@ -207,20 +207,20 @@ def cableSpeeds (cX, cY, tX, tY, JacoPlus):
     # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS
     # USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
     diffX = tX - cX
-    tVx =  diffX*fSamp
+    tVx =  diffX/timeSecs
     diffY = tY - cY
-    tVy = diffY*fSamp
+    tVy = diffY/timeSecs
     vMag = mt.sqrt(tVx**2 + tVy**2)
     # Check if point can be reached without exceeding speed limit.
     # Scale back velocity to speed limit and calculate actual position.
-    if vMag > speedLimit:
-        # Calculate unit velocity vector and multiply by 
-        # limit to scale down
-        tVx = (tVx/vMag)*speedLimit
-        tVy = (tVy/vMag)*speedLimit
+    # if vMag > speedLimit:
+    #     # Calculate unit velocity vector and multiply by 
+    #     # limit to scale down
+    #     tVx = (tVx/vMag)*speedLimit
+    #     tVy = (tVy/vMag)*speedLimit
         # Find actual position after movement
-        # actX = cX + (diffX*speedLimit/mt.sqrt(diffX**2 + diffY**2))/fSamp
-        # actY = cY + (diffY*speedLimit/mt.sqrt(diffX**2 + diffY**2))/fSamp
+        # actX = cX + (diffX*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+        # actY = cY + (diffY*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
         # print(actX, actY)
     v = np.array([[tVx],[tVy]])
     # vMag = mt.sqrt(tVx**2 + tVy**2)
