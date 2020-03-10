@@ -12,11 +12,11 @@ Set step frequency of individual pumps to alter speed
 """
 
 from arduinoInterface import connect, listenSteps, listenPress
-from kinematics import cableLengths, length2Vol, volRate, cableSpeeds
-from mouseGUI import createTracker, iterateTracker
-import numpy as np
-from numpy import linalg as la
-import time
+from kinematics import cableLengths, volRate, cableSpeeds
+from mouseGUI import mouseTracker
+# import numpy as np
+# from numpy import linalg as la
+import math as mt
 
 # top = connect("TOP", 4)
 # lhs = connect("LHS", 5)
@@ -30,58 +30,90 @@ import time
 #     i+=1
 
 #Initial values
-currentP = [25, 14.435]
+currentX = 25
+currentY = 14.435
+# currentP = [25, 14.435]
+# targetP = [0, 0]
+# Target must be cast as immutable type (int, in this case) so that 
+# the current position doesn't update at same time as target
+targetX = 0.0
+targetY = 0.0
+
+#Initialise variables
+vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL = 0, 0, 0, 0, 0, 0, 0
+vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR = 0, 0, 0, 0, 0, 0, 0
+vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT = 0, 0, 0, 0, 0, 0, 0
+lhsV, rhsV, topV = 0, 0, 0
+targetL, targetR, targetT, tJpinv = 0, 0, 0, 0
 # currentP = [25, 13]
-targetP = [25.5, 13.5]
-[cableL, cableR, cableT, cJpinv] = cableLengths(currentP[0], currentP[1])
-print("Cable lengths 1: ", cableL, cableR, cableT)
+# targetP = [25.5, 13.5]
+
+#Initialise cable length variables at home position
+[cableL, cableR, cableT, cJpinv] = cableLengths(currentX, currentY)
+# print("Cable lengths 1: ", cableL, cableR, cableT)
+
+# Instantiate class that sets up GUI
+mouseTrack = mouseTracker()
 # First attempt at main loop
-createTracker()
+mouseTrack.createTracker()
 while(1):
-    [targetP[0], targetP[1], tMillis, flagStop] = iterateTracker()
-    # diffP = mt.sqrt((targetP[0]-currentP[0])**2 + (targetP[1]-currentP[1])**2)
-    # diffP = 1000000*diffP
-    # deltaP = targetP-currentP
-    diffP = la.norm(np.array([[targetP[0]-currentP[0]], [targetP[1]-currentP[1]]]))
+    [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
+    # print(mouseTrack.xPix*0.06, mouseTrack.yPix*0.06)
+    # print("Current: ", currentX, currentY)
+    # print("Target:  ", targetX, targetY)
+    diffP = mt.sqrt((targetX-currentX)**2 + (targetY-currentY)**2)
     tSecs = tMillis/1000
-    # ADAPT KINEMATICS TO HANDLE VARYING TIME INPUT IN ms
-    # print(diffP)
-    # print(tSecs)
+    # print(diffP, "\n")
+    # print(tMillis)
     # FILTER INPUT FROM GUI
         # CHECK FOR ZEROS
         # IF TARGET == CURRENT
-    if diffP >= 0.1:
-        [targetL, targetR, targetT, tJpinv] = cableLengths(targetP[0], targetP[1])
+
+    # if diffP = 0:
+    try:
+        [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
+        [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, tJpinv, tSecs)
         [vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL] = volRate(cableL, targetL, tSecs)
         [vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR] = volRate(cableR, targetR, tSecs)
         [vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT] = volRate(cableT, targetT, tSecs)
-        [lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], tJpinv, tSecs)
+    except ZeroDivisionError as e:
+        pass
+        ####
+        # SEND VALUES TO ARDUINOS
+        ###
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
-    # print("Volume rate, syringe speed and pulse freq: \n", vDotL, dDotL, fStepL)
-    currentP = targetP
-    time.sleep(0.1)
+    # print("Volume rate, syringe speed and pulse freq: ", vDotL, dDotL, fStepL)
+    # print("Cable speeds: ", lhsV, rhsV, topV)
+
+    # Update current position and cable lengths as previous targets
+    currentX = targetX
+    currentY = targetY
+    cableL = targetL
+    cableR = targetR
+    cableT = targetT
     if flagStop:
         break
 
 
+# currentP = [25, 14.435]
+# targetP = [25.5, 14.5]
+# [cableL, cableR, cableT, cJpinv] = cableLengths(currentP[0], currentP[1])
+# [targetL, targetR, targetT, tJpinv] = cableLengths(targetP[0], targetP[1])
+# print("Cable lengths: ", cableL, cableR, cableT)
 
-[cableL, cableR, cableT, cJpinv] = cableLengths(currentP[0], currentP[1])
-[targetL, targetR, targetT, tJpinv] = cableLengths(targetP[0], targetP[1])
-print("Cable lengths: ", cableL, cableR, cableT)
+# # vDot is volume rate in mm3/s, dDot is syringe speed in mm/s, 
+# # fStep is step frequency to move at dDot mm/s, vC is current volume
+# # vT is target volume, dC and dT are current and target syringe displacements
+# secsTime = 0.01632
+# [vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL] = volRate(cableL, targetL, secsTime)
+# [vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR] = volRate(cableR, targetR, secsTime)
+# [vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT] = volRate(cableT, targetT, secsTime)
+# print("Volume rate, syringe speed and pulse freq: \n", vDotL, dDotL, fStepL) #vCL, vTL)
+# print(vDotR, dDotR, fStepR) #vCR, vTR)
+# print(vDotT, dDotT, fStepT) #vCT, vTT)
 
-# vDot is volume rate in mm3/s, dDot is syringe speed in mm/s, 
-# fStep is step frequency to move at dDot mm/s, vC is current volume
-# vT is target volume, dC and dT are current and target syringe displacements
-secsTime = 0.01632
-[vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL] = volRate(cableL, targetL, secsTime)
-[vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR] = volRate(cableR, targetR, secsTime)
-[vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT] = volRate(cableT, targetT, secsTime)
-print("Volume rate, syringe speed and pulse freq: \n", vDotL, dDotL, fStepL) #vCL, vTL)
-print(vDotR, dDotR, fStepR) #vCR, vTR)
-print(vDotT, dDotT, fStepT) #vCT, vTT)
-
-[lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], tJpinv, secsTime)
-print("Cable speeds: ", lhsV, rhsV, topV)
+# [lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], tJpinv, secsTime)
+# print("Cable speeds: ", lhsV, rhsV, topV)
 
 
 
