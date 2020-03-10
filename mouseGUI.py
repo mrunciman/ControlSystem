@@ -12,7 +12,7 @@ location = "C:/Users/msrun/OneDrive - Imperial College London/Imperial/Fluidic C
 start = time.time()
 prevMillis = 0
 fileName = location + "/positions" + str(int(start*1000)) + ".csv"
-# fileName = 'test.csv' # For test purposes
+fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog: 
     logger = csv.writer(posLog)
     logger.writerow(['Event', 'X', 'Y', 'Timestamp', 'ms Since Last'])
@@ -31,8 +31,12 @@ bkGd[:,:] = (255, 255, 255)
 windowName = 'End Effector Tracker'
 xCoord = 25
 yCoord = 14.435
+
+
 stopFlag = False
-timeDiff = 0.01 # TEMPORARY FIX
+timeDiff = 0.01 # TEMPORARY FIX INITIAL VALUE
+
+
 # Vertices of equilateral:
 vt1 = [0, canvasY]
 vt2 = [canvasX, canvasY]
@@ -40,6 +44,8 @@ vt3 = [int(canvasX/2), 0]
 vts = np.array([vt1, vt2, vt3])
 path = mpltPath.Path(vts)
 vts = vts.reshape((-1,1,2))
+
+
 # A flag for when mouse is up or down
 mouseDown = False
 # Radius of circles that are drawn 
@@ -47,6 +53,7 @@ radius = 3
 # neighbourhood = (x-2, y-2), (x+2, y-2), (x+2, y+2), (x-2, y+2)
 # Check if position is within neighbourhood on down click
 # If inside, move end effector and log.
+
 
 # Mouse callback function
 def drawCables(event, x, y, flags, param):
@@ -100,8 +107,6 @@ def drawCables(event, x, y, flags, param):
                     logger.writerow([event, x, y, now, timeDiff])
 
 
-
-
 # Lines below will be in controlSytem loop
 # Call function to instantiate canvas and set callback function
 def createTracker():
@@ -114,7 +119,6 @@ def createTracker():
     cv2.line(bkGd, (vt3[0], vt3[1]), (centreX, centreY), (0, 128, 0), 1)
     # Create a window with  given name
     cv2.namedWindow(windowName)
-    cv2. resizeWindow(windowName, canvasX+1, canvasY+1)# CAN THIS BE REMOVED?
     # Bind drawCables mouse callback function to window
     cv2.setMouseCallback(windowName, drawCables)
     
@@ -122,11 +126,12 @@ def createTracker():
 def iterateTracker():
     cv2.imshow(windowName, bkGd)
     # print(xCoord, yCoord)
-    stopFlag = False
+    # stopFlag = False
     if cv2.waitKey(20) & 0xFF == 27:
         stopFlag = True
         cv2.destroyAllWindows()
     return xCoord, yCoord, timeDiff, stopFlag
+
 
 # nameWindow = 'End Effector Tracker'
 # createTracker(nameWindow)

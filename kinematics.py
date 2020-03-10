@@ -61,7 +61,8 @@ speedLimit = 25 # mm/s
 
 
 def cableLengths(x, y):
-    """ Function finds cable lengths in mm from entry points to end effector
+    """
+    Function finds cable lengths in mm from entry points to end effector
     given an input point (x, y) in mm.
     Also returns pseudoinverse of Jacobian for new point.
     Jacobian is transpose of pose dependent structure matrix
@@ -176,9 +177,9 @@ def volRate(cCable, tCable, timeSecs):
     # Find current and target volume and displacement of syringe
     [cV, cD] = length2Vol(cCable)
     [tV, tD] = length2Vol(tCable)
-    # Use sampling frequency
+    # Calculate linear approximation of volume rate:
     vDot = (tV-cV)/timeSecs
-    dDot = 1000*vDot/As # mm^3/s
+    dDot = 1000*(vDot/As) # mm^3/s
 
     # For step count:
     # Mapping from step to 1 revolution = 200 steps
@@ -213,11 +214,11 @@ def cableSpeeds (cX, cY, tX, tY, JacoPlus, timeSecs):
     vMag = mt.sqrt(tVx**2 + tVy**2)
     # Check if point can be reached without exceeding speed limit.
     # Scale back velocity to speed limit and calculate actual position.
-    # if vMag > speedLimit:
-    #     # Calculate unit velocity vector and multiply by 
-    #     # limit to scale down
-    #     tVx = (tVx/vMag)*speedLimit
-    #     tVy = (tVy/vMag)*speedLimit
+    if vMag > speedLimit:
+        # Calculate unit velocity vector and multiply by 
+        # limit to scale down
+        tVx = (tVx/vMag)*speedLimit
+        tVy = (tVy/vMag)*speedLimit
         # Find actual position after movement
         # actX = cX + (diffX*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
         # actY = cY + (diffY*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
