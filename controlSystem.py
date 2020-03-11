@@ -32,9 +32,7 @@ import math as mt
 #Initial values
 currentX = 25
 currentY = 14.435
-# currentP = [25, 14.435]
-# targetP = [0, 0]
-# Target must be cast as immutable type (int, in this case) so that 
+# Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
 targetX = 0.0
 targetY = 0.0
@@ -45,12 +43,10 @@ vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR = 0, 0, 0, 0, 0, 0, 0
 vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT = 0, 0, 0, 0, 0, 0, 0
 lhsV, rhsV, topV = 0, 0, 0
 targetL, targetR, targetT, tJpinv = 0, 0, 0, 0
-# currentP = [25, 13]
-# targetP = [25.5, 13.5]
 
 #Initialise cable length variables at home position
 [cableL, cableR, cableT, cJpinv] = cableLengths(currentX, currentY)
-# print("Cable lengths 1: ", cableL, cableR, cableT)
+# print("Cable lengths: ", cableL, cableR, cableT)
 
 # Instantiate class that sets up GUI
 mouseTrack = mouseTracker()
@@ -58,7 +54,6 @@ mouseTrack = mouseTracker()
 mouseTrack.createTracker()
 while(1):
     [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
-    # print(mouseTrack.xPix*0.06, mouseTrack.yPix*0.06)
     # print("Current: ", currentX, currentY)
     # print("Target:  ", targetX, targetY)
     diffP = mt.sqrt((targetX-currentX)**2 + (targetY-currentY)**2)
@@ -83,7 +78,8 @@ while(1):
         ###
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
     # print("Volume rate, syringe speed and pulse freq: ", vDotL, dDotL, fStepL)
-    # print("Cable speeds: ", lhsV, rhsV, topV)
+    # print("Frequencies: ", fStepL, fStepR, fStepT)
+    print("Cable speeds: ", lhsV, rhsV, topV)
 
     # Update current position and cable lengths as previous targets
     currentX = targetX

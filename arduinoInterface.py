@@ -47,8 +47,8 @@ def listenSteps(ser):
     steps = listenSteps(serialConnection)
     """
     message = "S"
-    message = message.encode('utf-8')    #Encode message
-    ser.write(message)                   #Send message
+    message = message.encode('utf-8')
+    ser.write(message)
     steps = ser.readline().strip()
     steps = steps.decode('ascii')
     ser.reset_input_buffer()

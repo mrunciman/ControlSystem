@@ -48,6 +48,12 @@ theta = np.linspace(0, mt.pi/2, numPoints)
 # Using normalised sinc function so divide by pi, as this
 # avoids divide by zero errors when computing np.sin(x)/x
 cableLookup = L0*(1 - np.sinc(theta/mt.pi))
+
+# From pouch motors:
+# Add correction for when actuators are flat
+# P is pressure, Ce = 5.0e-6 Pa-1
+    # d = Ce*P
+    # cableLength*(1 + d*mt.pi/(mt.pi - 2)) - d
 # d/dt(sinc(t)) = (t*cos(t)-sin(t))/t**2
 # print(cableLookup)
 

@@ -60,6 +60,7 @@ class mouseTracker:
         self.xPix = centreX
         self.yPix = centreY
         self.mouseDown = False
+        self.touchDown = False
         self.start = time.time()
         self.timeDiff = 0
         self.prevMillis = 0
@@ -68,14 +69,14 @@ class mouseTracker:
 
     # Mouse callback function
     def drawCables(self, event, x, y, flags, param):
+        mouseDown = bool
         now = time.time()
-        param = [x,y]
-        # print(param)
         # Save time since beginning code in ms
         numMillis = now - self.start
         numMillis = numMillis*1000 # rounding error?
         self.timeDiff = numMillis - self.prevMillis
         self.prevMillis = numMillis
+
         # Draw a 5pixel side square around current point
         p1 = [self.xPix-n, self.yPix-n]
         p2 = [self.xPix+n, self.yPix-n]
@@ -85,30 +86,33 @@ class mouseTracker:
         neighPath = mpltPath.Path(neighbour)
         neighShape = neighbour.reshape((-1,1,2))
         cv2.polylines(bkGd, [neighShape], True, (0, 0, 0), 1)
+        # Check if position is within neighbourhood on down click
+        # If inside, move end effector and log.
+        touching = neighPath.contains_point([x, y])
+        # Check if point is inside triangle workspace
+        inside = path.contains_point([x, y])
+
         # Check if mouse button was pressed down (event 1)
         if event == 1:
             self.mouseDown = True
-            # bkGd[:,:] = (255, 255, 255)
-            # cv2.polylines(bkGd, [vts], True, (0, 0, 0), 1)
-            # cv2.line(bkGd, (vt1[0], vt1[1]), (x, y), (0, 128, 0), 1)
-            # cv2.line(bkGd, (vt2[0], vt2[1]), (x, y), (0, 128, 0), 1)
-            # cv2.line(bkGd, (vt3[0], vt3[1]), (x, y), (0, 128, 0), 1)
-            # print("Inside, Down")
+            if touching == True:
+                self.touchDown = True
+
         # Check if mouse button released (event 4) and redraw
         if event == 4:
             self.mouseDown = False
-            # cv2.line(bkGd, (vt1[0], vt1[1]), (x, y), (0, 0, 200), 1)
-            # cv2.line(bkGd, (vt2[0], vt2[1]), (x, y), (0, 0, 200), 1)
-            # cv2.line(bkGd, (vt3[0], vt3[1]), (x, y), (0, 0, 200), 1)
-            # print("Inside, Up")
-        # Check if point is inside triangle workspace
-        inside = path.contains_point([x, y])
+            self.touchDown = False
+            # If released inside triangle and within
+            # end effector handle, redraw cables red
+            if inside == True:
+                if touching == True:
+                    cv2.line(bkGd, (vt1[0], vt1[1]), (x, y), (0, 0, 200), 1)
+                    cv2.line(bkGd, (vt2[0], vt2[1]), (x, y), (0, 0, 200), 1)
+                    cv2.line(bkGd, (vt3[0], vt3[1]), (x, y), (0, 0, 200), 1)
+
         if inside == True:
             if self.mouseDown == True:
-                # Check if position is within neighbourhood on down click
-                # If inside, move end effector and log.
-                touching = neighPath.contains_point([x, y])
-                if touching == True:
+                if self.touchDown == True:
                     # Check if moving
                     if event == 0:
                         cv2.circle(bkGd, (x, y), radius, (0, 0, 0), -1)
@@ -128,6 +132,10 @@ class mouseTracker:
                         # self.Coords[1] = yPrime*resolution
                         # Collect tdata in list to be exported on exit
                         self.logData.append([event] + [self.xCoord] + [self.yCoord] + [now] + [self.timeDiff])
+        else:
+            self.touchDown = False
+
+
 
 
 # Lines below will be in controlSytem loop
