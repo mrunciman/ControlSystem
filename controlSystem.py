@@ -11,16 +11,17 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, listenSteps, listenPress
-from kinematics import cableLengths, volRate, cableSpeeds
+from arduinoInterface import connect, listenSteps, listenPress, sendFreq
+from kinematics import cableLengths, length2Vol, volRate, cableSpeeds
 from mouseGUI import mouseTracker
 # import numpy as np
 # from numpy import linalg as la
 import math as mt
 
+lhs= "Kegs"
 # top = connect("TOP", 4)
 # lhs = connect("LHS", 5)
-# rhs = connect("RHS", 6)
+# rhs = connect("RHS", 5)
 
 # i = 0
 # while i < 10:
@@ -38,14 +39,18 @@ targetX = 0.0
 targetY = 0.0
 
 #Initialise variables
-vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL = 0, 0, 0, 0, 0, 0, 0
-vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR = 0, 0, 0, 0, 0, 0, 0
-vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT = 0, 0, 0, 0, 0, 0, 0
+vDotL, dDotL, fStepL, stepL, speedL = 0, 0, 0, 0, 0
+vDotR, dDotR, fStepR, stepR, speedR = 0, 0, 0, 0, 0
+vDotT, dDotT, fStepT, stepT, speedT = 0, 0, 0, 0, 0
 lhsV, rhsV, topV = 0, 0, 0
 targetL, targetR, targetT, tJpinv = 0, 0, 0, 0
 
 #Initialise cable length variables at home position
 [cableL, cableR, cableT, cJpinv] = cableLengths(currentX, currentY)
+# currentY = 0
+[cVolL, cDL, stepL] = length2Vol(cableL, cableL)
+[cVolR, cDR, stepR] = length2Vol(cableR, cableR)
+[cVolT, cDT, stepT] = length2Vol(cableT, cableT)
 # print("Cable lengths: ", cableL, cableR, cableT)
 
 # Instantiate class that sets up GUI
@@ -54,39 +59,50 @@ mouseTrack = mouseTracker()
 mouseTrack.createTracker()
 while(1):
     [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
+    # targetY = 0
     # print("Current: ", currentX, currentY)
     # print("Target:  ", targetX, targetY)
     diffP = mt.sqrt((targetX-currentX)**2 + (targetY-currentY)**2)
     tSecs = tMillis/1000
     # print(diffP, "\n")
-    # print(tMillis)
-    # FILTER INPUT FROM GUI
-        # CHECK FOR ZEROS
-        # IF TARGET == CURRENT
+    # print(mouseTrack.xCoord, mouseTrack.yCoord)
 
-    # if diffP = 0:
     try:
+        # Do cable and syringe calculations:
+        # Get target lengths and Jacobian from target point
         [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
-        [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, tJpinv, tSecs)
-        [vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL] = volRate(cableL, targetL, tSecs)
-        [vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR] = volRate(cableR, targetR, tSecs)
-        [vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT] = volRate(cableT, targetT, tSecs)
+        # Get cable speeds using Jacobian at current point and calculation of input speed
+        [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
+        # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
+        [tVolL, vDotL, dDotL, fStepL, stepL, speedL] = volRate(cVolL, cableL, targetL)
+        [tVolR, vDotR, dDotR, fStepR, stepR, speedR] = volRate(cVolR, cableR, targetR)
+        [tVolT, vDotT, dDotT, fStepT, stepT, speedT] = volRate(cVolT, cableT, targetT)
+        # Send values to arduinos
+        
+        OCRL = sendFreq(lhs, fStepL)
+        # print(OCRL)
+        # sendFreq(rhs, fStepR)
+        # sendFreq(top, fStepT)
     except ZeroDivisionError as e:
         pass
-        ####
-        # SEND VALUES TO ARDUINOS
-        ###
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
-    # print("Volume rate, syringe speed and pulse freq: ", vDotL, dDotL, fStepL)
+    # print("Cable speeds: ", lhsV, rhsV, topV)
+    # print("Approx speeds: ", speedL, speedR, speedT)
+    # print("Volume rates: ", vDotL, vDotR, vDotT)
+    # print("Syringe speeds: ", dDotL, dDotR, dDotT)
     # print("Frequencies: ", fStepL, fStepR, fStepT)
-    print("Cable speeds: ", lhsV, rhsV, topV)
+    # print("Step Number: ", stepL, stepR, stepT)
 
-    # Update current position and cable lengths as previous targets
+    # Update current position, cable lengths, and volumes as previous targets
+    cJpinv = tJpinv
     currentX = targetX
     currentY = targetY
     cableL = targetL
     cableR = targetR
     cableT = targetT
+    cVolL = tVolL
+    cVolR = tVolR
+    cVolT = tVolT
     if flagStop:
         break
 

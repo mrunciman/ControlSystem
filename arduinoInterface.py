@@ -7,7 +7,10 @@ protection and volume calculation.
 import serial 
 import time
 
-
+#Arduino clock frequency
+CLOCK_FREQ = 16000000
+# Arduino prescalar value
+PRESCALER = 8
 
 
 def connect(pumpName, portNumber) :
@@ -71,3 +74,25 @@ def listenPress(ser):
     ser.reset_input_buffer()
     #print(pressure)
     return pressure
+
+def sendFreq(ser, freq):
+    """
+    This function sends the desired step frequency 
+    to the serial port ser. Negative and positve values acccepted
+    and dealt with on arduino.
+    """
+    # Add newline character on end for ease of reading on arduino
+    message = "O"
+    if freq != 0:
+        OCR = CLOCK_FREQ/(PRESCALER*freq)-1
+        message = message + str(OCR)
+    else:
+        OCR = 0
+    # message = message.encode('utf-8')    #Encode message
+    # ser.write(message)                   #Send message
+    # reply = ser.readline().strip()
+    # reply = reply.decode('ascii')
+    # ser.reset_input_buffer()
+    return OCR
+
+

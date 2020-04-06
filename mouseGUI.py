@@ -49,7 +49,7 @@ vts = vts.reshape((-1,1,2))
 # Radius of circles that are drawn 
 radius = 3
 # Create an 2n+1 pixel side square around current point
-n = 12
+n = 10
 class mouseTracker:
 
     def __init__(self):
@@ -69,11 +69,10 @@ class mouseTracker:
 
     # Mouse callback function
     def drawCables(self, event, x, y, flags, param):
-        mouseDown = bool
         now = time.time()
         # Save time since beginning code in ms
-        numMillis = now - self.start
-        numMillis = numMillis*1000 # rounding error?
+        numMillis = now - self.start #Still in seconds
+        numMillis = numMillis*1000
         self.timeDiff = numMillis - self.prevMillis
         self.prevMillis = numMillis
 
@@ -86,12 +85,12 @@ class mouseTracker:
         neighPath = mpltPath.Path(neighbour)
         neighShape = neighbour.reshape((-1,1,2))
         cv2.polylines(bkGd, [neighShape], True, (0, 0, 0), 1)
+        # cv2.polylines(bkGd, [neighShape], True, (0, 0, 0), 1)
         # Check if position is within neighbourhood on down click
         # If inside, move end effector and log.
         touching = neighPath.contains_point([x, y])
         # Check if point is inside triangle workspace
         inside = path.contains_point([x, y])
-
         # Check if mouse button was pressed down (event 1)
         if event == 1:
             self.mouseDown = True
@@ -155,7 +154,6 @@ class mouseTracker:
 
     def iterateTracker(self):
         cv2.imshow(windowName, bkGd)
-        dTime = self.timeDiff
         if cv2.waitKey(20) & 0xFF == 27:
             self.stopFlag = True
             cv2.destroyAllWindows()
@@ -163,6 +161,6 @@ class mouseTracker:
                 logger = csv.writer(posLog)
                 # print(self.logData[-1])
                 logger.writerows(self.logData)
-        return self.xCoord, self.yCoord, dTime, self.stopFlag
+        return self.xCoord, self.yCoord, self.timeDiff, self.stopFlag
 
 
