@@ -96,3 +96,22 @@ def sendFreq(ser, freq):
     return OCR
 
 
+def sendOCR(ser, OCR):
+    """
+    This function sends the desired step frequency 
+    to the serial port ser. Negative and positve values acccepted
+    and dealt with on arduino.
+    """
+    # Add newline character on end for ease of reading on arduino
+    message = "O"
+    if OCR < 0:
+        message = message + str(OCR)
+    else:
+        message = message + " " + str(OCR)
+    # print(message)
+    message = message.encode('utf-8')    #Encode message
+    # ser.write(message)                   #Send message
+    # reply = ser.readline().strip()
+    # reply = reply.decode('ascii')
+    # ser.reset_input_buffer()
+    return message

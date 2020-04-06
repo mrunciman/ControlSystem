@@ -11,14 +11,16 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, listenSteps, listenPress, sendFreq
-from kinematics import cableLengths, length2Vol, volRate, cableSpeeds
+from arduinoInterface import connect, listenSteps, listenPress, sendFreq, sendOCR
+from kinematics import cableLengths, length2Vol, volRate, freq2OCR, cableSpeeds
 from mouseGUI import mouseTracker
 # import numpy as np
 # from numpy import linalg as la
-import math as mt
+# import math as mt
 
 lhs= "Kegs"
+rhs = "Friel"
+top = "Kinloch"
 # top = connect("TOP", 4)
 # lhs = connect("LHS", 5)
 # rhs = connect("RHS", 5)
@@ -62,7 +64,7 @@ while(1):
     # targetY = 0
     # print("Current: ", currentX, currentY)
     # print("Target:  ", targetX, targetY)
-    diffP = mt.sqrt((targetX-currentX)**2 + (targetY-currentY)**2)
+    # diffP = mt.sqrt((targetX-currentX)**2 + (targetY-currentY)**2)
     tSecs = tMillis/1000
     # print(diffP, "\n")
     # print(mouseTrack.xCoord, mouseTrack.yCoord)
@@ -74,15 +76,15 @@ while(1):
         # Get cable speeds using Jacobian at current point and calculation of input speed
         [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
         # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
-        [tVolL, vDotL, dDotL, fStepL, stepL, speedL] = volRate(cVolL, cableL, targetL)
-        [tVolR, vDotR, dDotR, fStepR, stepR, speedR] = volRate(cVolR, cableR, targetR)
-        [tVolT, vDotT, dDotT, fStepT, stepT, speedT] = volRate(cVolT, cableT, targetT)
-        # Send values to arduinos
-        
-        OCRL = sendFreq(lhs, fStepL)
-        # print(OCRL)
-        # sendFreq(rhs, fStepR)
-        # sendFreq(top, fStepT)
+        [tVolL, vDotL, dDotL, fStepL, stepL, OCRL] = volRate(cVolL, cableL, targetL)
+        [tVolR, vDotR, dDotR, fStepR, stepR, OCRR] = volRate(cVolR, cableR, targetR)
+        [tVolT, vDotT, dDotT, fStepT, stepT, OCRT] = volRate(cVolT, cableT, targetT)
+        # Calculate compare register values that produce closest frequencies
+        [OCRL, OCRR, OCRT] = freq2OCR(fStepL, fStepR, fStepT)
+        # Send interrupt register values to arduinos        
+        mL = sendOCR(lhs, OCRL)
+        mR = sendOCR(rhs, OCRR)
+        mT = sendOCR(top, OCRT)
     except ZeroDivisionError as e:
         pass
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)

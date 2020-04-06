@@ -57,7 +57,7 @@ theta = np.linspace(0, mt.pi/2, numPoints)
 # Using normalised sinc function so divide by pi, as this
 # avoids divide by zero errors when computing np.sin(x)/x
 cableLookup = L0*(1 - np.sinc(theta/mt.pi))
-volLookup = factV*(theta - np.cos(theta)*np.sin(theta))/(theta**2)
+# volLookup = factV*(theta - np.cos(theta)*np.sin(theta))/(theta**2)
 # From pouch motors:
 # Add correction for when actuators are flat
 # P is pressure, Ce = 5.0e-6 Pa-1
@@ -70,6 +70,19 @@ volLookup = factV*(theta - np.cos(theta)*np.sin(theta))/(theta**2)
 # Master Controller
 ###################################################################
 speedLimit = 25 # mm/s
+
+###################################################################
+# Pulse generation
+###################################################################
+#Arduino clock frequency
+CLOCK_FREQ = 16000000
+# Arduino prescalar value
+PRESCALER = 8
+# numBits = 16
+# OCR = np.linspace(0, 2**numBits, (2**numBits)+1)
+# f8 = CLOCK_FREQ/(PRESCALER*(OCR+1))
+MAX_FREQ = 2000
+
 
 
 def cableLengths(x, y):
@@ -173,9 +186,12 @@ def length2Vol (currentCable, targetCable):
     # Find distance syringe pump has to move to reach desired volume
     lengthSyringe = volume/As   # Convert to stepCount?
     stepCount = round(lengthSyringe*stepsPMM)
+    stepCount = int(stepCount)
     # Convert from mm^3 to ml
     # volume = volume / 1000
     return volume, cableSpeed, stepCount
+
+
 
 ###### MAKE THIS FUNCTION ACCPET CURRENT VOLUME, SO CALC ISN'T REPEATED
 def volRate(cV, cCable, tCable):
@@ -200,11 +216,45 @@ def volRate(cV, cCable, tCable):
     # Steps/mm = (StepPerRev*Microsteps)/(Lead) 
     # For speed: pulses/mm * mm/s = pulses/s
     fStep = stepsPMM*dDot
-    # Calculate output compare register value and send to arduino    
 
     return tV, vDot, dDot, fStep, stepNo, tSpeed
 
-# Control frequency of interrupts to control speed
+
+
+def freq2OCR(fL, fR, fT):
+    """
+    Returns output compare register values for use in interrupts.
+    If any frequency exceeds stepper MAX_FREQ then all are scaled
+    down to preserve velocity vector direction.
+    """
+    fList = np.array([fL, fR, fT])
+    fAbs = np.absolute(fList)
+    OCR = np.array([0, 0, 0])
+    # Find OCR and scale if any of the frequency values is non-zero
+    if np.any(fList):
+        fSign = fList/fAbs
+        fMax = np.amax(fAbs)
+        # If largest frequency is above MAX_FREQ then scale
+        if fMax > MAX_FREQ:
+            fFact = MAX_FREQ/fMax
+            fScaled = fFact*fAbs
+            OCR = np.round(fSign*((CLOCK_FREQ/(PRESCALER*fScaled))-1))
+        # Else use unscaled frequencies
+        else:
+            OCR = np.round(fSign*((CLOCK_FREQ/(PRESCALER*fAbs))-1))
+    OCR = np.int_(OCR)
+
+    # for i in range(3):
+    #     if fAbs[i] == 0:
+    #         OCR[i] = 0
+    #     elif maxF >= MAX_FREQ:
+    #         OCR[i] = np.round(fSign[i]*((CLOCK_FREQ/(PRESCALER*fScaled[i]))-1))
+    #     else:
+    #         OCR[i] = np.round(fSign[i]*((CLOCK_FREQ/(PRESCALER*fAbs[i]))-1))
+    # OCR = np.int_(OCR)
+
+    return OCR[0], OCR[1], OCR[2]
+
 
 
 def cableSpeeds (cX, cY, tX, tY, JacoPlus, timeSecs):
@@ -216,37 +266,37 @@ def cableSpeeds (cX, cY, tX, tY, JacoPlus, timeSecs):
     by sampling frequency of master. JacoPlus is pseudoinverse of
     Jacobian at a given point.
     """
+    timeSecs = 0.01
+
     # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS
     # USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
     diffX = tX - cX
     #############################################
     # Testing to see how it looks with fixed time step, in this case 0.01 s for a 100 Hz loop
-    tVx =  diffX/0.01 #timeSecs
+    tVx =  diffX/timeSecs
     diffY = tY - cY
-    tVy = diffY/0.01 #timeSecs
+    tVy = diffY/timeSecs
     vMag = mt.sqrt(tVx**2 + tVy**2)
     # Check if point can be reached without exceeding speed limit.
     # Scale back velocity to speed limit and calculate actual position.
 
-    # if vMag > speedLimit:
-    #     # Calculate unit velocity vector and multiply by 
-    #     # limit to scale down
-    #     tVx = (tVx/vMag)*speedLimit
-    #     tVy = (tVy/vMag)*speedLimit
-    #     # Find actual position after movement
-    #     # actX = cX + (diffX*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
-    #     # actY = cY + (diffY*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
-    #     # print(actX, actY)
+    if vMag > speedLimit:
+        # Calculate unit velocity vector and multiply by 
+        # limit to scale down
+        tVx = (tVx/vMag)*speedLimit
+        tVy = (tVy/vMag)*speedLimit
+        # Find actual position after movement
+        # actX = cX + (diffX*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+        # actY = cY + (diffY*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+        # print(actX, actY)
 
     v = np.array([[tVx],[tVy]])
-    # print(v[0])
-    # vMag = mt.sqrt(tVx**2 + tVy**2)
-    # print(vMag)
 
     # IK premultiplying input end effector velocity vector with pseudoinverse J
     # to yield joint velocities.
     cableRates = np.dot(JacoPlus, v)
-    print(cableRates)
+    # velocity = np.dot(J, cableRates)
+    # print(velocity)
     lhsSpeed = cableRates[0] # These are all array type still
     rhsSpeed = cableRates[1]
     topSpeed = cableRates[2]
