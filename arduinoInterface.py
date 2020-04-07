@@ -27,11 +27,11 @@ def connect(pumpName, portNumber) :
     #Open serial port at given COM port at 115200 baud rate
     ser = serial.Serial(port, 115200)
     # print(ser)
-
-    time.sleep(1)   #give arduino time to set up (there are delays in arduino code for pressure sensor)
+    # print(pumpName)
+    time.sleep(2)   #give arduino time to set up (there are delays in arduino code for pressure sensor)
     message = message.encode('utf-8')    #Encode message
-    ser.write(message)                   #Send message 
     while reply != pumpName:
+        ser.write(message)        #Send message 
         if ser.in_waiting > 0:
             reply = ser.readline().strip()
             reply = reply.decode('ascii')
@@ -82,7 +82,7 @@ def sendFreq(ser, freq):
     and dealt with on arduino.
     """
     # Add newline character on end for ease of reading on arduino
-    message = "O"
+    message = "F"
     if freq != 0:
         OCR = CLOCK_FREQ/(PRESCALER*freq)-1
         message = message + str(OCR)
@@ -105,13 +105,13 @@ def sendOCR(ser, OCR):
     # Add newline character on end for ease of reading on arduino
     message = "O"
     if OCR < 0:
-        message = message + str(OCR)
+        message = message + str(OCR) + "\n"
     else:
-        message = message + " " + str(OCR)
+        message = message + "+" + str(OCR) + "\n"
     # print(message)
     message = message.encode('utf-8')    #Encode message
-    # ser.write(message)                   #Send message
-    # reply = ser.readline().strip()
-    # reply = reply.decode('ascii')
-    # ser.reset_input_buffer()
+    ser.write(message)                   #Send message
+    reply = ser.readline().strip()
+    reply = reply.decode('ascii')
+    ser.reset_input_buffer()
     return message

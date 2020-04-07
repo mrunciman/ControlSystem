@@ -19,21 +19,18 @@ from mouseGUI import mouseTracker
 # import math as mt
 
 lhs= "Kegs"
-rhs = "Friel"
+# rhs = "Friel"
 top = "Kinloch"
-# top = connect("TOP", 4)
-# lhs = connect("LHS", 5)
-# rhs = connect("RHS", 5)
 
-# i = 0
-# while i < 10:
-#     rhsSteps = listenSteps(rhs)
-#     rhsPressure = listenPress(rhs)
-#     print(rhsSteps)
-#     i+=1
+# lhs = connect("LHS", 5)
+try:
+    rhs = connect("RHS", 4)
+except KeyboardInterrupt:
+    rhs.close()
+# top = connect("TOP", 4)
 
 #Initial values
-currentX = 25
+currentX = 25.0
 currentY = 14.435
 # Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
@@ -82,9 +79,10 @@ while(1):
         # Calculate compare register values that produce closest frequencies
         [OCRL, OCRR, OCRT] = freq2OCR(fStepL, fStepR, fStepT)
         # Send interrupt register values to arduinos        
-        mL = sendOCR(lhs, OCRL)
+        # mL = sendOCR(lhs, OCRL)
         mR = sendOCR(rhs, OCRR)
-        mT = sendOCR(top, OCRT)
+        # mT = sendOCR(top, OCRT)
+        print(mR)
     except ZeroDivisionError as e:
         pass
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
@@ -133,5 +131,5 @@ while(1):
 
 # top.close()
 # lhs.close()
-# rhs.close()
+rhs.close()
 
