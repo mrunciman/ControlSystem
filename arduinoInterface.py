@@ -114,4 +114,4 @@ def sendOCR(ser, OCR):
     reply = ser.readline().strip()
     reply = reply.decode('ascii')
     ser.reset_input_buffer()
-    return message
+    return reply

@@ -82,7 +82,7 @@ while(1):
         # mL = sendOCR(lhs, OCRL)
         mR = sendOCR(rhs, OCRR)
         # mT = sendOCR(top, OCRT)
-        print(mR)
+        # print(mR)
     except ZeroDivisionError as e:
         pass
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)

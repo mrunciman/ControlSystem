@@ -82,6 +82,7 @@ PRESCALER = 8
 # OCR = np.linspace(0, 2**numBits, (2**numBits)+1)
 # f8 = CLOCK_FREQ/(PRESCALER*(OCR+1))
 MAX_FREQ = 2000
+TWO2_16 = 2**16
 
 
 
@@ -242,16 +243,12 @@ def freq2OCR(fL, fR, fT):
         # Else use unscaled frequencies
         else:
             OCR = np.round(fSign*((CLOCK_FREQ/(PRESCALER*fAbs))-1))
+    # Check for low frequency limit/upper limit of OCR, due to 16 bit timer
+    # if OCR[OCR > TWO2_16].size > 0:
+    #     OCRMax = np.amax(OCR)
+    #     OCRFact = TWO2_16/OCRMax
+    OCR[OCR > TWO2_16] = TWO2_16
     OCR = np.int_(OCR)
-
-    # for i in range(3):
-    #     if fAbs[i] == 0:
-    #         OCR[i] = 0
-    #     elif maxF >= MAX_FREQ:
-    #         OCR[i] = np.round(fSign[i]*((CLOCK_FREQ/(PRESCALER*fScaled[i]))-1))
-    #     else:
-    #         OCR[i] = np.round(fSign[i]*((CLOCK_FREQ/(PRESCALER*fAbs[i]))-1))
-    # OCR = np.int_(OCR)
 
     return OCR[0], OCR[1], OCR[2]
 
