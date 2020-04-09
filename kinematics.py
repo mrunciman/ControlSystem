@@ -207,7 +207,7 @@ def volRate(cV, cCable, tCable):
     [tV, tSpeed, stepNo] = length2Vol(cCable, tCable)
     # Calculate linear approximation of volume rate:
     volDiff = tV-cV
-    vDot = (volDiff)/0.01 #timeSecs  # mm^3/s
+    vDot = (volDiff)/0.008 #timeSecs  # mm^3/s
     dDot = (vDot/As) # mm/s
 
     # For step count:
@@ -263,13 +263,13 @@ def cableSpeeds (cX, cY, tX, tY, JacoPlus, timeSecs):
     by sampling frequency of master. JacoPlus is pseudoinverse of
     Jacobian at a given point.
     """
-    timeSecs = 0.01
+    timeSecs = 0.008
 
     # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS
     # USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
     diffX = tX - cX
     #############################################
-    # Testing to see how it looks with fixed time step, in this case 0.01 s for a 100 Hz loop
+    # Testing to see how it looks with fixed time step, in this case 0.008 s for a 125 Hz loop
     tVx =  diffX/timeSecs
     diffY = tY - cY
     tVy = diffY/timeSecs

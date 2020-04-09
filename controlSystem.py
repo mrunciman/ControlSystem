@@ -11,45 +11,74 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, listenSteps, listenPress, sendFreq, sendOCR
+from arduinoInterface import connect, sendStep, listenPress, sendFreq, sendOCR
 from kinematics import cableLengths, length2Vol, volRate, freq2OCR, cableSpeeds
 from mouseGUI import mouseTracker
 # import numpy as np
 # from numpy import linalg as la
 # import math as mt
 
+tHome = 4 # Time in s to go to home position from 0 (flat actuators)
+
 lhs= "Kegs"
 # rhs = "Friel"
 top = "Kinloch"
 
-# lhs = connect("LHS", 5)
 try:
+    # lhs = connect("LHS", 5)
     rhs = connect("RHS", 4)
+    # top = connect("TOP", 4)
 except KeyboardInterrupt:
     rhs.close()
-# top = connect("TOP", 4)
+
+
 
 #Initial values
-currentX = 25.0
-currentY = 14.435
+currentX = 0
+currentY = 0
 # Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
-targetX = 0.0
-targetY = 0.0
+targetX = 25.0
+targetY = 14.435
+
 
 #Initialise variables
-vDotL, dDotL, fStepL, stepL, speedL = 0, 0, 0, 0, 0
-vDotR, dDotR, fStepR, stepR, speedR = 0, 0, 0, 0, 0
-vDotT, dDotT, fStepT, stepT, speedT = 0, 0, 0, 0, 0
-lhsV, rhsV, topV = 0, 0, 0
-targetL, targetR, targetT, tJpinv = 0, 0, 0, 0
+# tVolL, vDotL, dDotL, fStepL, stepL, OCRL = 0, 0, 0, 0, 0, 0
+# tVolR, vDotR, dDotR, fStepR, stepR, OCRR = 0, 0, 0, 0, 0, 0
+# tVolT, vDotT, dDotT, fStepT, stepT, OCRT = 0, 0, 0, 0, 0, 0
+# lhsV, rhsV, topV = 0, 0, 0
+# targetL, targetR, targetT, tJpinv = 0, 0, 0, 0
+
 
 #Initialise cable length variables at home position
-[cableL, cableR, cableT, cJpinv] = cableLengths(currentX, currentY)
+cVolL, cVolR, cVolT = 0, 0, 0
+cableL, cableR, cableT = 50, 50, 50
+[targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
+realStepL, realStepR, realStepT = 0, 0, 0
+
+[tVolL, vDotL, dDotL, fStepL, stepL, OCRL] = volRate(cVolL, cableL, targetL)
+[tVolR, vDotR, dDotR, fStepR, stepR, OCRR] = volRate(cVolR, cableR, targetR)
+[tVolT, vDotT, dDotT, fStepT, stepT, OCRT] = volRate(cVolT, cableT, targetT)
+[OCRL, OCRR, OCRT] = freq2OCR(fStepL, fStepR, fStepT)
+
+fHomeL = stepL/tHome
+fHomeR = stepR/tHome
+fHomeT = stepT/tHome
+
+# [OCRL, OCRR, OCRT] = freq2OCR(fHomeL, fHomeR, fHomeT)
+
+# print(OCRL, OCRR, OCRT)
+# realStepL = sendStep(lhs, stepL)
+# realStepR = sendStep(rhs, stepR)
+# realStepT = sendStep(top, stepT)
+# mL = sendOCR(lhs, OCRL)
+# mR = sendOCR(rhs, OCRR)
+# mT = sendOCR(top, OCRT)
+
 # currentY = 0
-[cVolL, cDL, stepL] = length2Vol(cableL, cableL)
-[cVolR, cDR, stepR] = length2Vol(cableR, cableR)
-[cVolT, cDT, stepT] = length2Vol(cableT, cableT)
+# [cVolL, cDL, stepL] = length2Vol(cableL, cableL)
+# [cVolR, cDR, stepR] = length2Vol(cableR, cableR)
+# [cVolT, cDT, stepT] = length2Vol(cableT, cableT)
 # print("Cable lengths: ", cableL, cableR, cableT)
 
 # Instantiate class that sets up GUI
@@ -71,7 +100,7 @@ while(1):
         # Get target lengths and Jacobian from target point
         [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
         # Get cable speeds using Jacobian at current point and calculation of input speed
-        [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
+        # [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
         # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
         [tVolL, vDotL, dDotL, fStepL, stepL, OCRL] = volRate(cVolL, cableL, targetL)
         [tVolR, vDotR, dDotR, fStepR, stepR, OCRR] = volRate(cVolR, cableR, targetR)
@@ -80,9 +109,11 @@ while(1):
         [OCRL, OCRR, OCRT] = freq2OCR(fStepL, fStepR, fStepT)
         # Send interrupt register values to arduinos        
         # mL = sendOCR(lhs, OCRL)
+        realStepR = sendStep(rhs, stepR)
         mR = sendOCR(rhs, OCRR)
         # mT = sendOCR(top, OCRT)
-        # print(mR)
+        print("OCR: ", mR)
+        print("Arduino says: ", realStepR, "   Master says: ", stepR)
     except ZeroDivisionError as e:
         pass
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
