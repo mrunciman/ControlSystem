@@ -36,10 +36,10 @@ def connect(pumpName, portNumber) :
             reply = ser.readline().strip()
             reply = reply.decode('ascii')
             ser.reset_input_buffer()
-            print(reply)
+            # print(reply)
 
     # return open serial connection to allow pumps to be controlled in main code
-    return ser
+    return ser, reply
 
 
 
@@ -52,11 +52,13 @@ def sendStep(ser, stepNumber):
     message = "S" + str(stepNumber) + "\n"
     message = message.encode('utf-8')
     ser.write(message)
-    stepCount = ser.readline().strip()
-    stepCount = stepCount.decode('ascii')
-    ser.reset_input_buffer()
-    #print(stepCount)
-    return stepCount
+    if stepNumber != "Closed":
+        stepCount = ser.readline().strip()
+        stepCount = stepCount.decode('ascii')
+        ser.reset_input_buffer()
+        return stepCount
+    else:
+        return stepNumber
 
 
 
@@ -113,9 +115,9 @@ def sendFreq(ser, freq):
         message = message + str(OCR)
     else:
         OCR = 0
-    # message = message.encode('utf-8')    #Encode message
-    # ser.write(message)                   #Send message
-    # reply = ser.readline().strip()
-    # reply = reply.decode('ascii')
-    # ser.reset_input_buffer()
+    message = message.encode('utf-8')    #Encode message
+    ser.write(message)                   #Send message
+    reply = ser.readline().strip()
+    reply = reply.decode('ascii')
+    ser.reset_input_buffer()
     return OCR

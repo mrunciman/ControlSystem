@@ -69,6 +69,8 @@ class mouseTracker:
 
     # Mouse callback function
     def drawCables(self, event, x, y, flags, param):
+        flags = flags
+        param = param
         now = time.time()
         # Save time since beginning code in ms
         numMillis = now - self.start #Still in seconds
@@ -159,8 +161,16 @@ class mouseTracker:
             cv2.destroyAllWindows()
             with open(fileName, 'a', newline='') as posLog:
                 logger = csv.writer(posLog)
-                # print(self.logData[-1])
                 logger.writerows(self.logData)
         return self.xCoord, self.yCoord, self.timeDiff, self.stopFlag
+
+    def closeTracker(self):
+        # cv2.waitKey = 27
+        self.stopFlag = True
+        cv2.destroyAllWindows()
+        with open(fileName, 'a', newline='') as posLog:
+            logger = csv.writer(posLog)
+            logger.writerows(self.logData)
+        return self.stopFlag
 
 

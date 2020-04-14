@@ -11,8 +11,8 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, sendStep, listenPress, sendFreq, sendOCR
-from kinematics import cableLengths, length2Vol, volRate, freq2OCR, cableSpeeds
+from arduinoInterface import connect, sendStep, sendOCR
+from kinematics import cableLengths, volRate, freq2OCR
 from mouseGUI import mouseTracker
 # import numpy as np
 # from numpy import linalg as la
@@ -26,13 +26,13 @@ top = "Kinloch"
 
 try:
     # lhs = connect("LHS", 5)
-    rhs = connect("RHS", 4)
+    [rhs, reply] = connect("RHS", 4)
+    print(reply)
     # top = connect("TOP", 4)
 except KeyboardInterrupt:
     rhs.close()
 
-
-
+flagStop = False
 #Initial values
 currentX = 0
 currentY = 0
@@ -40,15 +40,6 @@ currentY = 0
 # the current position doesn't update at same time as target
 targetX = 25.0
 targetY = 14.435
-
-
-#Initialise variables
-# tVolL, vDotL, dDotL, fStepL, stepL, OCRL = 0, 0, 0, 0, 0, 0
-# tVolR, vDotR, dDotR, fStepR, stepR, OCRR = 0, 0, 0, 0, 0, 0
-# tVolT, vDotT, dDotT, fStepT, stepT, OCRT = 0, 0, 0, 0, 0, 0
-# lhsV, rhsV, topV = 0, 0, 0
-# targetL, targetR, targetT, tJpinv = 0, 0, 0, 0
-
 
 #Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
@@ -65,36 +56,14 @@ fHomeL = stepL/tHome
 fHomeR = stepR/tHome
 fHomeT = stepT/tHome
 
-# [OCRL, OCRR, OCRT] = freq2OCR(fHomeL, fHomeR, fHomeT)
-
-# print(OCRL, OCRR, OCRT)
-# realStepL = sendStep(lhs, stepL)
-# realStepR = sendStep(rhs, stepR)
-# realStepT = sendStep(top, stepT)
-# mL = sendOCR(lhs, OCRL)
-# mR = sendOCR(rhs, OCRR)
-# mT = sendOCR(top, OCRT)
-
-# currentY = 0
-# [cVolL, cDL, stepL] = length2Vol(cableL, cableL)
-# [cVolR, cDR, stepR] = length2Vol(cableR, cableR)
-# [cVolT, cDT, stepT] = length2Vol(cableT, cableT)
-# print("Cable lengths: ", cableL, cableR, cableT)
 
 # Instantiate class that sets up GUI
 mouseTrack = mouseTracker()
 # First attempt at main loop
 mouseTrack.createTracker()
-while(1):
+while(flagStop == False):
     [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
-    # targetY = 0
-    # print("Current: ", currentX, currentY)
-    # print("Target:  ", targetX, targetY)
-    # diffP = mt.sqrt((targetX-currentX)**2 + (targetY-currentY)**2)
     tSecs = tMillis/1000
-    # print(diffP, "\n")
-    # print(mouseTrack.xCoord, mouseTrack.yCoord)
-
     try:
         # Do cable and syringe calculations:
         # Get target lengths and Jacobian from target point
@@ -107,13 +76,16 @@ while(1):
         [tVolT, vDotT, dDotT, fStepT, stepT, OCRT] = volRate(cVolT, cableT, targetT)
         # Calculate compare register values that produce closest frequencies
         [OCRL, OCRR, OCRT] = freq2OCR(fStepL, fStepR, fStepT)
-        # Send interrupt register values to arduinos        
-        # mL = sendOCR(lhs, OCRL)
+        # Send step number to arduinos:
+        # realStepL = sendStep(lhs, stepL)
         realStepR = sendStep(rhs, stepR)
+        # realStepT = sendStep(top, stepT)
+        # Send interrupt register values to arduinos   
+        # mL = sendOCR(lhs, OCRL)
         mR = sendOCR(rhs, OCRR)
         # mT = sendOCR(top, OCRT)
-        print("OCR: ", mR)
         print("Arduino says: ", realStepR, "   Master says: ", stepR)
+        print("StepError: ", mR)
     except ZeroDivisionError as e:
         pass
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
@@ -134,33 +106,16 @@ while(1):
     cVolL = tVolL
     cVolR = tVolR
     cVolT = tVolT
-    if flagStop:
-        break
 
-
-# currentP = [25, 14.435]
-# targetP = [25.5, 14.5]
-# [cableL, cableR, cableT, cJpinv] = cableLengths(currentP[0], currentP[1])
-# [targetL, targetR, targetT, tJpinv] = cableLengths(targetP[0], targetP[1])
-# print("Cable lengths: ", cableL, cableR, cableT)
-
-# # vDot is volume rate in mm3/s, dDot is syringe speed in mm/s, 
-# # fStep is step frequency to move at dDot mm/s, vC is current volume
-# # vT is target volume, dC and dT are current and target syringe displacements
-# secsTime = 0.01632
-# [vDotL, dDotL, fStepL, vCL, vTL, dCL, dTL] = volRate(cableL, targetL, secsTime)
-# [vDotR, dDotR, fStepR, vCR, vTR, dCR, dTR] = volRate(cableR, targetR, secsTime)
-# [vDotT, dDotT, fStepT, vCT, vTT, dCT, dTT] = volRate(cableT, targetT, secsTime)
-# print("Volume rate, syringe speed and pulse freq: \n", vDotL, dDotL, fStepL) #vCL, vTL)
-# print(vDotR, dDotR, fStepR) #vCR, vTR)
-# print(vDotT, dDotT, fStepT) #vCT, vTT)
-
-# [lhsV, rhsV, topV] = cableSpeeds(currentP[0], currentP[1], targetP[0], targetP[1], tJpinv, secsTime)
-# print("Cable speeds: ", lhsV, rhsV, topV)
-
-
-
-# top.close()
+flagStop = mouseTrack.closeTracker()
+# realStepL = sendStep(lhs, "Closed")
+realStepR = sendStep(rhs, "Closed")
+# realStepT = sendStep(top, "Closed")
+# mL = sendOCR(lhs, 0)
+# mR = sendOCR(rhs, 0)
+# mT = sendOCR(top, 0)
 # lhs.close()
 rhs.close()
+# top.close()
+
 
