@@ -46,6 +46,7 @@ stepsPMM = (StepPerRev*Microsteps)/(Lead) # steps per mm
 stepsPV = stepsPMM/As # Steps per mm^3
 maxSteps = stepsPV*maxV # number of steps needed to fill pouch
 # print(maxSteps)
+timeStep = 0.01 # Inverse of sampling frequency on arduinos
 
 ###################################################################
 # Lookup table
@@ -167,14 +168,14 @@ def cableLengths(x, y):
 def length2Vol (currentCable, targetCable):
     """
     Function returns required volume in ml in muscle to reach desired length,
-    as well as displacement from 0 position on linear actuator.
+    the piston speed required, as well as displacement from 0 position on pump.
     Uses lookup table/interpolation to approximate inverse of sin(theta)/theta
     for required length, given contractedL = flatL times sin(theta)/theta
-    e.g. length2Vol(17.32)
+    e.g. length2Vol(17.32, 18)
     """
     Lc = S - targetCable
     Lc0 = S - currentCable
-    cableSpeed = (Lc-Lc0)*100
+    cableSpeed = (Lc-Lc0)/timeStep
     # Use lookup tables defined above to find theta angle based on input length
     angle = np.interp(Lc, cableLookup, theta)
     # Calculate normalised volume of a beam of arbitrary size
@@ -187,7 +188,8 @@ def length2Vol (currentCable, targetCable):
     # Find distance syringe pump has to move to reach desired volume
     lengthSyringe = volume/As   # Convert to stepCount?
     stepCount = round(lengthSyringe*stepsPMM)
-    stepCount = int(stepCount)
+    # stepCount = stepCount*(lengthSyringe/abs(lengthSyringe))
+    # stepCount = int(stepCount)
     # Convert from mm^3 to ml
     # volume = volume / 1000
     return volume, cableSpeed, stepCount
@@ -207,7 +209,7 @@ def volRate(cV, cCable, tCable):
     [tV, tSpeed, stepNo] = length2Vol(cCable, tCable)
     # Calculate linear approximation of volume rate:
     volDiff = tV-cV
-    vDot = (volDiff)/0.008 #timeSecs  # mm^3/s
+    vDot = (volDiff)/timeStep #timeSecs  # mm^3/s
     dDot = (vDot/As) # mm/s
 
     # For step count:
@@ -222,7 +224,7 @@ def volRate(cV, cCable, tCable):
 
 
 
-def freq2OCR(fL, fR, fT):
+def freqScale(fL, fR, fT):
     """
     Returns output compare register values for use in interrupts.
     If any frequency exceeds stepper MAX_FREQ then all are scaled
@@ -231,26 +233,34 @@ def freq2OCR(fL, fR, fT):
     fList = np.array([fL, fR, fT])
     fAbs = np.absolute(fList)
     OCR = np.array([0, 0, 0])
+    fRound = np.array([0, 0, 0])
     # Find OCR and scale if any of the frequency values is non-zero
     if np.any(fList):
-        fSign = fList/fAbs
+        fSign = np.sign(fList)
         fMax = np.amax(fAbs)
         # If largest frequency is above MAX_FREQ then scale
         if fMax > MAX_FREQ:
             fFact = MAX_FREQ/fMax
             fScaled = fFact*fAbs
-            OCR = np.round(fSign*((CLOCK_FREQ/(PRESCALER*fScaled))-1))
+            # OCR = np.ceil((CLOCK_FREQ/(PRESCALER*fScaled))-1)
+            fScaled = fScaled*fSign
+            fList = fScaled
+            # print("Original: ", fList*timeStep, "   Scaled: ", fScaled*timeStep)
         # Else use unscaled frequencies
-        else:
-            OCR = np.round(fSign*((CLOCK_FREQ/(PRESCALER*fAbs))-1))
+        # else:
+            # OCR = np.ceil((CLOCK_FREQ/(PRESCALER*fAbs))-1)
+        fRound = np.around(timeStep*fList*fSign)
+        fRound = fRound*fSign
+        # fRound = np.int_(fRound)
+        # OCR = fSign*OCR
     # Check for low frequency limit/upper limit of OCR, due to 16 bit timer
     # if OCR[OCR > TWO2_16].size > 0:
     #     OCRMax = np.amax(OCR)
     #     OCRFact = TWO2_16/OCRMax
-    OCR[OCR > TWO2_16] = TWO2_16
-    OCR = np.int_(OCR)
+    # OCR[OCR > TWO2_16] = TWO2_16
+    # OCR = np.int_(OCR)
 
-    return OCR[0], OCR[1], OCR[2]
+    return OCR[0], OCR[1], OCR[2], fRound[0], fRound[1], fRound[2]
 
 
 
@@ -263,13 +273,13 @@ def cableSpeeds (cX, cY, tX, tY, JacoPlus, timeSecs):
     by sampling frequency of master. JacoPlus is pseudoinverse of
     Jacobian at a given point.
     """
-    timeSecs = 0.008
+    timeSecs = 0.01
 
     # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS
     # USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE
     diffX = tX - cX
     #############################################
-    # Testing to see how it looks with fixed time step, in this case 0.008 s for a 125 Hz loop
+    # Testing to see how it looks with fixed time step, in this case 0.01 s for a 100 Hz loop
     tVx =  diffX/timeSecs
     diffY = tY - cY
     tVy = diffY/timeSecs

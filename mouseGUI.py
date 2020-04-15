@@ -66,11 +66,13 @@ class mouseTracker:
         self.prevMillis = 0
         self.stopFlag = False
         self.logData = []
+        self.flag = 0
+        self.param = 0
 
     # Mouse callback function
     def drawCables(self, event, x, y, flags, param):
-        flags = flags
-        param = param
+        self.flag = flags
+        self.param = param
         now = time.time()
         # Save time since beginning code in ms
         numMillis = now - self.start #Still in seconds
@@ -155,6 +157,8 @@ class mouseTracker:
         cv2.setMouseCallback(windowName, self.drawCables)
 
     def iterateTracker(self):
+        # Bind drawCables mouse callback function to window
+        cv2.setMouseCallback(windowName, self.drawCables)
         cv2.imshow(windowName, bkGd)
         if cv2.waitKey(20) & 0xFF == 27:
             self.stopFlag = True
