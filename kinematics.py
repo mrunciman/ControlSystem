@@ -242,23 +242,25 @@ def freqScale(fL, fR, fT):
         if fMax > MAX_FREQ:
             fFact = MAX_FREQ/fMax
             fScaled = fFact*fAbs
-            # OCR = np.ceil((CLOCK_FREQ/(PRESCALER*fScaled))-1)
+            OCR[fScaled != 0] = np.ceil((CLOCK_FREQ/(PRESCALER*fScaled[fScaled != 0]))-1)
             fScaled = fScaled*fSign
             fList = fScaled
             # print("Original: ", fList*timeStep, "   Scaled: ", fScaled*timeStep)
         # Else use unscaled frequencies
-        # else:
-            # OCR = np.ceil((CLOCK_FREQ/(PRESCALER*fAbs))-1)
+        else:
+            OCR[fAbs != 0] = np.ceil((CLOCK_FREQ/(PRESCALER*fAbs[fAbs != 0]))-1)
+            # for i in range(3):
+            #     if fAbs[i] == 0:
+            #         OCR[i] = 0
+            #     else:
+            #         OCR[i] = np.ceil((CLOCK_FREQ/(PRESCALER*fAbs[i]))-1)
         fRound = np.around(timeStep*fList*fSign)
         fRound = fRound*fSign
-        # fRound = np.int_(fRound)
-        # OCR = fSign*OCR
+        fRound = np.int_(fRound)
+        OCR = fSign*OCR
     # Check for low frequency limit/upper limit of OCR, due to 16 bit timer
-    # if OCR[OCR > TWO2_16].size > 0:
-    #     OCRMax = np.amax(OCR)
-    #     OCRFact = TWO2_16/OCRMax
-    # OCR[OCR > TWO2_16] = TWO2_16
-    # OCR = np.int_(OCR)
+    OCR[OCR > TWO2_16] = TWO2_16
+    OCR = np.int_(OCR)
 
     return OCR[0], OCR[1], OCR[2], fRound[0], fRound[1], fRound[2]
 

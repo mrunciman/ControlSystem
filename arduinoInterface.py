@@ -36,7 +36,6 @@ def connect(pumpName, portNumber) :
             reply = ser.readline().strip()
             reply = reply.decode('ascii')
             ser.reset_input_buffer()
-            # print(reply)
 
     # return open serial connection to allow pumps to be controlled in main code
     return ser, reply

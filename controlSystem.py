@@ -11,7 +11,7 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, sendStep, sendOCR
+from arduinoInterface import connect, sendStep, listenPress
 from kinematics import cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 # import numpy as np
@@ -20,19 +20,21 @@ from mouseGUI import mouseTracker
 
 tHome = 4 # Time in s to go to home position from 0 (flat actuators)
 
-lhs= "Kegs"
+# lhs= "Kegs"
 # rhs = "Friel"
-top = "Kinloch"
+# top = "Kinloch"
 
 try:
-    # [lhs, reply] = connect("LHS", 6)
+    [lhs, reply] = connect("LHS", 6)
+    print(reply)
     [rhs, reply] = connect("RHS", 4)
     print(reply)
-    # [top, reply] = connect("TOP", 5)
+    [top, reply] = connect("TOP", 5)
+    print(reply)
 except KeyboardInterrupt:
-    # lhs.close()
+    lhs.close()
     rhs.close()
-    # top.close()
+    top.close()
 
 flagStop = False
 #Initial values
@@ -87,21 +89,25 @@ while(flagStop == False):
         [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR] = volRate(cVolR, cableR, targetR)
         [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT] = volRate(cVolT, cableT, targetT)
         # CALCULATE FREQS FROM VALID STEP NUMBER
+        # stepL is master position, cStepL is real, speed controlled position.
         dStepL = stepL - cStepL 
         dStepR = stepR - cStepR
         dStepT = stepT - cStepT
-        fStepL = dStepL*100
+        fStepL = dStepL*100 # 100 is sampling frequency 
         fStepR = dStepR*100
         fStepT = dStepT*100
         [OCRL, OCRR, OCRT, LStep, RStep, TStep] = freqScale(fStepL, fStepR, fStepT)
+        SteppyL += LStep
+        SteppyR += RStep # RStep = dStepR scaled for speed (w rounding differences)
+        SteppyT += TStep
         # Send step number to arduinos:
-        # realStepL = sendStep(lhs, stepL)
-        realStepR = sendStep(rhs, stepR)
-        # realStepT = sendStep(top, stepT)
+        realStepL = sendStep(lhs, SteppyL)
+        realStepR = sendStep(rhs, SteppyR)
+        realStepT = sendStep(top, SteppyT)
         # Send interrupt register values to arduinos   
-        # mL = sendOCR(lhs, OCRL)
-        mR = sendOCR(rhs, OCRR)
-        # mT = sendOCR(top, OCRT)
+        mL = listenPress(lhs)
+        mR = listenPress(rhs)
+        mT = listenPress(top)
 
     except ZeroDivisionError as e:
         pass
@@ -113,6 +119,11 @@ while(flagStop == False):
     # print("Frequencies: ", fStepL, fStepR, fStepT)
     # print("Step Number: ", stepL, stepR, stepT)
 
+    # print("Arduino says: ", realStepR, "   Master says: ", stepR)
+    print("Master says: ", SteppyT)
+    print("Pressure: ", mL, mR, mT, "  Real: ", realStepT)
+    # print("StepError: ", mR)
+
     # Update current position, cable lengths, and volumes as previous targets
     cJpinv = tJpinv
     currentX = targetX
@@ -123,27 +134,22 @@ while(flagStop == False):
     cVolL = tVolL
     cVolR = tVolR
     cVolT = tVolT
+    cStepL = SteppyL
+    cStepR = SteppyR
+    cStepT = SteppyT
 
-    cStepL = stepL
-    cStepR = stepR
-    cStepT = stepT
-    # SteppyL += LStep
-    # SteppyR += RStep
-    # SteppyT += TStep
-    # print("Arduino says: ", realStepR, "   Master says: ", stepR)
-    print("Master says: ", stepR)
-    print("Error: ",mR, "  Real: ", realStepR)
-    # print("StepError: ", mR)
+
 
 flagStop = mouseTrack.closeTracker()
-# realStepL = sendStep(lhs, "Closed")
+realStepL = sendStep(lhs, "Closed")
 realStepR = sendStep(rhs, "Closed")
-# realStepT = sendStep(top, "Closed")
+realStepT = sendStep(top, "Closed")
+print(realStepT)
 # mL = sendOCR(lhs, 0)
 # mR = sendOCR(rhs, 0)
 # mT = sendOCR(top, 0)
-# lhs.close()
+lhs.close()
 rhs.close()
-# top.close()
+top.close()
 
 
