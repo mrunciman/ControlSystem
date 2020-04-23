@@ -35,7 +35,7 @@ except KeyboardInterrupt:
     lhs.close()
     rhs.close()
     top.close()
-time.sleep(0.5)
+
 
 
 flagStop = False
