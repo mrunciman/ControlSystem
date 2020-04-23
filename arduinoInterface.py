@@ -96,7 +96,6 @@ def listenPress(ser):
     pressure = ser.readline().strip()
     pressure = pressure.decode('ascii')
     ser.reset_input_buffer()
-    #print(pressure)
     return pressure
 
 

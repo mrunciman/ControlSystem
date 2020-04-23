@@ -14,9 +14,11 @@ Set step frequency of individual pumps to alter speed
 from arduinoInterface import connect, sendStep, listenPress
 from kinematics import cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
+from ardLogger import ardLog, ardSave
+import time
 # import numpy as np
 # from numpy import linalg as la
-# import math as mt
+# import math as topP
 
 tHome = 4 # Time in s to go to home position from 0 (flat actuators)
 
@@ -35,6 +37,8 @@ except KeyboardInterrupt:
     lhs.close()
     rhs.close()
     top.close()
+time.sleep(0.5)
+
 
 flagStop = False
 #Initial values
@@ -105,9 +109,9 @@ while(flagStop == False):
         realStepR = sendStep(rhs, SteppyR)
         realStepT = sendStep(top, SteppyT)
         # Send interrupt register values to arduinos   
-        mL = listenPress(lhs)
-        mR = listenPress(rhs)
-        mT = listenPress(top)
+        lhsP = listenPress(lhs)
+        rhsP = listenPress(rhs)
+        topP = listenPress(top)
 
     except ZeroDivisionError as e:
         pass
@@ -121,8 +125,8 @@ while(flagStop == False):
 
     # print("Arduino says: ", realStepR, "   Master says: ", stepR)
     print("Master says: ", SteppyT)
-    print("Pressure: ", mL, mR, mT, "  Real: ", realStepT)
-    # print("StepError: ", mR)
+    print("Pressure: ", lhsP, rhsP, topP, "  Real: ", realStepT)
+    # print("StepError: ", rhsP)
 
     # Update current position, cable lengths, and volumes as previous targets
     cJpinv = tJpinv
@@ -137,6 +141,7 @@ while(flagStop == False):
     cStepL = SteppyL
     cStepR = SteppyR
     cStepT = SteppyT
+    ardLog(realStepL, lhsP, realStepR, rhsP, realStepT, topP)
 
 
 
@@ -144,10 +149,8 @@ flagStop = mouseTrack.closeTracker()
 realStepL = sendStep(lhs, "Closed")
 realStepR = sendStep(rhs, "Closed")
 realStepT = sendStep(top, "Closed")
+ardSave()
 print(realStepT)
-# mL = sendOCR(lhs, 0)
-# mR = sendOCR(rhs, 0)
-# mT = sendOCR(top, 0)
 lhs.close()
 rhs.close()
 top.close()

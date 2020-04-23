@@ -10,7 +10,7 @@ import matplotlib.path as mpltPath
 # Append timestamp in ms to name
 location = "C:/Users/msrun/OneDrive - Imperial College London/Imperial/Fluidic Control/ControlSystem/logs"
 logTime = time.time()
-fileName = location + "/positions" + str(int(logTime*1000)) + ".csv"
+fileName = location + "/positions" + str(int(logTime*1000)) + ".csv" # USE THIS IN REAL TESTS
 fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog1: 
     logger1 = csv.writer(posLog1)
@@ -162,10 +162,10 @@ class mouseTracker:
         cv2.imshow(windowName, bkGd)
         if cv2.waitKey(20) & 0xFF == 27:
             self.stopFlag = True
-            cv2.destroyAllWindows()
-            with open(fileName, 'a', newline='') as posLog:
-                logger = csv.writer(posLog)
-                logger.writerows(self.logData)
+            # cv2.destroyAllWindows()
+            # with open(fileName, 'a', newline='') as posLog:
+            #     logger = csv.writer(posLog)
+            #     logger.writerows(self.logData)
         return self.xCoord, self.yCoord, self.timeDiff, self.stopFlag
 
     def closeTracker(self):
