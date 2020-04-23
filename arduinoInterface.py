@@ -26,97 +26,42 @@ def connect(pumpName, portNumber) :
 
     #Open serial port at given COM port at 115200 baud rate
     ser = serial.Serial(port, 115200)
-    # print(ser)
-    # print(pumpName)
-    time.sleep(2)   #give arduino time to set up (there are delays in arduino code for pressure sensor)
+    # time.sleep(1)   
     message = message.encode('utf-8')    #Encode message
-    while reply != pumpName:
-        ser.write(message)        #Send message 
+    while(1):
+        ser.write(message)
+        time.sleep(1)     #give arduino time to set up (there are delays in arduino code for pressure sensor)
         if ser.in_waiting > 0:
             reply = ser.readline().strip()
-            reply = reply.decode('ascii')
             ser.reset_input_buffer()
-
+            reply = reply.decode('ascii')
+            if reply == pumpName:
+                ser.reset_output_buffer()
+                break
     # return open serial connection to allow pumps to be controlled in main code
     return ser, reply
 
 
 
-def sendStep(ser, stepNumber):
+def listenStepPress(ser, stepNumber):
     """
     This function sends ideal position (stepNumber) then receives
     the real step count (stepCount) from arduino.
     steps = sendStep(serialConnection, stepNumber)
     """
     message = "S" + str(stepNumber) + "\n"
+    # print("Message: ", message)
     message = message.encode('utf-8')
     ser.write(message)
+    stepPress = ser.readline().strip()
+    stepPress = stepPress.decode('ascii')
+    # print("Response: ", stepPress)
+    stepPress = stepPress.split(',')
+    ser.reset_input_buffer()
     if stepNumber != "Closed":
-        stepCount = ser.readline().strip()
-        stepCount = stepCount.decode('ascii')
-        ser.reset_input_buffer()
-        return stepCount
+        stepCount = stepPress[0]
+        pumpPress = stepPress[1]
     else:
-        return stepNumber
-
-
-
-def sendOCR(ser, OCR):
-    """
-    This function sends the desired step frequency 
-    to the serial port ser. Negative and positve values acccepted
-    and dealt with on arduino.
-    """
-    # Add newline character on end for ease of reading on arduino
-    message = "O"
-    if OCR < 0:
-        message = message + str(OCR) + "\n"
-    else:
-        message = message + "+" + str(OCR) + "\n"
-    # print(message)
-    message = message.encode('utf-8')    #Encode message
-    ser.write(message)                   #Send message
-    reply = ser.readline().strip()
-    reply = reply.decode('ascii')
-    ser.reset_input_buffer()
-    return reply
-
-
-
-
-def listenPress(ser):
-    """
-    This function asks for then receives the pressure read by
-    the arduino over serial.
-    pressure = listenPress(serialConnection)
-    """
-    message = "P"
-    message = message.encode('utf-8')    #Encode message
-    ser.write(message)                   #Send message
-    pressure = ser.readline().strip()
-    pressure = pressure.decode('ascii')
-    ser.reset_input_buffer()
-    #print(pressure)
-    return pressure
-
-
-
-def sendFreq(ser, freq):
-    """
-    This function sends the desired step frequency 
-    to the serial port ser. Negative and positve values acccepted
-    and dealt with on arduino.
-    """
-    # Add newline character on end for ease of reading on arduino
-    message = "F"
-    if freq != 0:
-        OCR = CLOCK_FREQ/(PRESCALER*freq)-1
-        message = message + str(OCR)
-    else:
-        OCR = 0
-    message = message.encode('utf-8')    #Encode message
-    ser.write(message)                   #Send message
-    reply = ser.readline().strip()
-    reply = reply.decode('ascii')
-    ser.reset_input_buffer()
-    return OCR
+        stepCount = stepPress
+        pumpPress = 0
+    return stepCount, pumpPress
