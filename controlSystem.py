@@ -14,6 +14,9 @@ Set step frequency of individual pumps to alter speed
 from arduinoInterface import connect, listenStepPress
 from kinematics import cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
+from ardLogger import ardLog, ardSave
+import time
+
 
 tHome = 4 # Time in s to go to home position from 0 (flat actuators)
 SAMP_FREQ = 100
@@ -32,6 +35,8 @@ except KeyboardInterrupt:
     lhs.close()
     rhs.close()
     top.close()
+time.sleep(0.5)
+
 
 flagStop = False
 #Initial values
@@ -98,9 +103,9 @@ while(flagStop == False):
         SteppyR += RStep # RStep = dStepR scaled for speed (w rounding differences)
         SteppyT += TStep
         # Send step number to arduinos:
-        [realStepL, lhsP] = listenStepPress(lhs, SteppyL)
-        [realStepR, rhsP] = listenStepPress(rhs, SteppyR)
-        [realStepT, topP] = listenStepPress(top, SteppyT)
+        [realStepL, pressL] = listenStepPress(lhs, SteppyL)
+        [realStepR, pressR] = listenStepPress(rhs, SteppyR)
+        [realStepT, pressT] = listenStepPress(top, SteppyT)
 
 
     except ZeroDivisionError as e:
@@ -119,6 +124,7 @@ while(flagStop == False):
     cStepL = SteppyL
     cStepR = SteppyR
     cStepT = SteppyT
+    ardLog(realStepL, pressL, realStepR, pressR, realStepT, pressT)
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
     # print("Cable speeds: ", lhsV, rhsV, topV)
     # print("Approx speeds: ", speedL, speedR, speedT)
@@ -129,16 +135,16 @@ while(flagStop == False):
 
     # print("Arduino says: ", realStepR, "   Master says: ", stepR)
     print("Master says: ", SteppyT)
-    print("Pressure: ", lhsP, rhsP, topP, "  Real: ", realStepT)
+    print("Pressure: ", pressL, pressR, pressT, "  Real: ", realStepT)
 
 flagStop = mouseTrack.closeTracker()
-[realStepL, lhsP] = listenStepPress(lhs, "Closed")
-[realStepR, rhsP] = listenStepPress(rhs, "Closed")
-[realStepT, topP] = listenStepPress(top, "Closed")
+[realStepL, pressL] = listenStepPress(lhs, "Closed")
+[realStepR, pressR] = listenStepPress(rhs, "Closed")
+[realStepT, pressT] = listenStepPress(top, "Closed")
 print(realStepL)
 print(realStepR)
 print(realStepT)
-
+ardSave()
 lhs.close()
 rhs.close()
 top.close()

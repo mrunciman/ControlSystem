@@ -7,13 +7,7 @@ protection and volume calculation.
 import serial 
 import time
 
-#Arduino clock frequency
-CLOCK_FREQ = 16000000
-# Arduino prescalar value
-PRESCALER = 8
-
-
-def connect(pumpName, portNumber) :
+def connect(pumpName, portNumber):
     """
     Each pump requires verification of the cable it is contolling (top, lhs, or rhs).
     Pumps will function normally when the pumpName sent here matches the name hardcoded 
