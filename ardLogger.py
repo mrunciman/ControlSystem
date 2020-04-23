@@ -23,6 +23,9 @@ def ardLog(lhsS, lhsP, rhsS, rhsP, topS, topP):
     return
 
 def ardSave():
+    """
+    Save ardLog list into csv file
+    """
     with open(fileName, 'a', newline='') as arduinoLog2:
         ardLog2 = csv.writer(arduinoLog2)
         ardLog2.writerows(ardData)
