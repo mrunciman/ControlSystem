@@ -9,9 +9,10 @@ import matplotlib.path as mpltPath
 # Create a file in 'log' directory and empty contents (if it already exists)
 # Append timestamp in ms to name
 location = "C:/Users/msrun/OneDrive - Imperial College London/Imperial/Fluidic Control/ControlSystem/logs"
-logTime = time.time()
-fileName = location + "/positions" + str(int(logTime*1000)) + ".csv" # USE THIS IN REAL TESTS
-fileName = 'test.csv' # For test purposes
+# logTime = time.time()
+logTime = time.strftime("%Y-%m-%d-_-%H-%M-%S")
+fileName = location + "/positions " + logTime + ".csv" # USE THIS IN REAL TESTS
+# fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog1: 
     logger1 = csv.writer(posLog1)
     logger1.writerow(['Event', 'X', 'Y', 'Timestamp', 'ms Since Last'])

@@ -55,7 +55,9 @@ def listenStepPress(ser, stepNumber):
     if stepNumber != "Closed":
         stepCount = stepPress[0]
         pumpPress = stepPress[1]
+        pumpTime = stepPress[2]
     else:
-        stepCount = stepPress
+        stepCount = stepPress[0]
         pumpPress = 0
-    return stepCount, pumpPress
+        pumpTime = stepPress[1]
+    return stepCount, pumpPress, pumpTime

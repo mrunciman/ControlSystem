@@ -15,7 +15,6 @@ from arduinoInterface import connect, listenStepPress
 from kinematics import cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLog, ardSave
-import time
 
 
 tHome = 4 # Time in s to go to home position from 0 (flat actuators)
@@ -36,7 +35,8 @@ except KeyboardInterrupt:
     rhs.close()
     top.close()
 
-
+###########################
+# Calibrate arduinos for zero volume
 
 flagStop = False
 #Initial values
@@ -72,7 +72,12 @@ cStepR = stepR
 cStepT = stepT
 dStepL, dStepR, dStepT  = 0, 0, 0
 
-SteppyL, SteppyR, SteppyT = 2168, 2168, 2168
+StepNoL, StepNoR, StepNoT = 2168, 2168, 2168
+
+######################################################
+# Get response from pumps to confirm volume calibration
+
+
 # Instantiate class that sets up GUI
 mouseTrack = mouseTracker()
 # First attempt at main loop
@@ -99,13 +104,13 @@ while(flagStop == False):
         fStepR = dStepR*SAMP_FREQ
         fStepT = dStepT*SAMP_FREQ
         [OCRL, OCRR, OCRT, LStep, RStep, TStep] = freqScale(fStepL, fStepR, fStepT)
-        SteppyL += LStep
-        SteppyR += RStep # RStep = dStepR scaled for speed (w rounding differences)
-        SteppyT += TStep
+        StepNoL += LStep
+        StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
+        StepNoT += TStep
         # Send step number to arduinos:
-        [realStepL, pressL] = listenStepPress(lhs, SteppyL)
-        [realStepR, pressR] = listenStepPress(rhs, SteppyR)
-        [realStepT, pressT] = listenStepPress(top, SteppyT)
+        [realStepL, pressL, timeL] = listenStepPress(lhs, StepNoL)
+        [realStepR, pressR, timeR] = listenStepPress(rhs, StepNoR)
+        [realStepT, pressT, timeT] = listenStepPress(top, StepNoT)
 
 
     except ZeroDivisionError as e:
@@ -121,10 +126,10 @@ while(flagStop == False):
     cVolL = tVolL
     cVolR = tVolR
     cVolT = tVolT
-    cStepL = SteppyL
-    cStepR = SteppyR
-    cStepT = SteppyT
-    ardLog(realStepL, pressL, realStepR, pressR, realStepT, pressT)
+    cStepL = StepNoL
+    cStepR = StepNoR
+    cStepT = StepNoT
+    ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
     # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
     # print("Cable speeds: ", lhsV, rhsV, topV)
     # print("Approx speeds: ", speedL, speedR, speedT)
@@ -134,13 +139,13 @@ while(flagStop == False):
     # print("Step Number: ", stepL, stepR, stepT)
 
     # print("Arduino says: ", realStepR, "   Master says: ", stepR)
-    print("Master says: ", SteppyT)
+    print("Master says: ", StepNoT)
     print("Pressure: ", pressL, pressR, pressT, "  Real: ", realStepT)
 
 flagStop = mouseTrack.closeTracker()
-[realStepL, pressL] = listenStepPress(lhs, "Closed")
-[realStepR, pressR] = listenStepPress(rhs, "Closed")
-[realStepT, pressT] = listenStepPress(top, "Closed")
+[realStepL, pressL, timeL] = listenStepPress(lhs, "Closed")
+[realStepR, pressR, timeR] = listenStepPress(rhs, "Closed")
+[realStepT, pressT, timeT] = listenStepPress(top, "Closed")
 print(realStepL)
 print(realStepR)
 print(realStepT)
