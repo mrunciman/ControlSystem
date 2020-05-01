@@ -128,8 +128,8 @@ while(flagStop == False):
     # print("Step Number: ", stepL, stepR, stepT)
 
     # print("Arduino says: ", realStepR, "   Master says: ", stepR)
-    print("Master says: ", SteppyT)
-    print("Pressure: ", lhsP, rhsP, topP, "  Real: ", realStepT)
+    # print("Master says: ", SteppyT)
+    print("Pressure: ", lhsP, rhsP, topP, "  StepT: ", realStepT)
 
 flagStop = mouseTrack.closeTracker()
 [realStepL, lhsP] = listenStepPress(lhs, "Closed")
