@@ -19,7 +19,7 @@ def connect(pumpName, portNumber):
     port = 'COM%s' % (portNumber)
 
     #Open serial port at given COM port at 115200 baud rate
-    ser = serial.Serial(port, 115200)
+    ser = serial.Serial(port = port, baudrate = 115200, timeout = 0)
     # time.sleep(1)   
     message = message.encode('utf-8')    #Encode message
     while(1):
@@ -47,15 +47,35 @@ def listenStepPress(ser, stepNumber):
     # print("Message: ", message)
     message = message.encode('utf-8')
     ser.write(message)
-    stepPress = ser.readline().strip()
-    stepPress = stepPress.decode('ascii')
-    # print("Response: ", stepPress)
+    stepPress = ser.read(30)
+    stepPress = stepPress.decode('utf-8')
     stepPress = stepPress.split(',')
+    # print(stepPress)
+    # stepCount = binascii.b2a_uu(stepCount)
+    # stepCount = int.from_bytes(stepCount, "big")
+    # print(stepCount)
+    # comma = ser.read(1)
+    # stepCount = 0
+    # pumpPress = 0
+    # pumpPress = ser.read(4)
+    # pumpPress = int.from_bytes(pumpPress, "big")
+    # print(pumpPress)
+    # print('\n')
+    # time = ser.read(4)
+    # stepPress = ser.readline().strip()
+    # stepPress = stepPress.decode('ascii')
+    # print("Response: ", stepCount, pumpPress, time)
+    # stepPress = stepPress.split(',')
     ser.reset_input_buffer()
     if stepNumber != "Closed":
-        stepCount = stepPress[0]
-        pumpPress = stepPress[1]
-        pumpTime = stepPress[2]
+        if stepPress == ['']:
+            stepCount = "Zilch" # CHange this later to handle dropped values
+            pumpPress = "Dinna ken"
+            pumpTime = "Denner"
+        else:
+            stepCount = stepPress[0]
+            pumpPress = float(stepPress[1])/10
+            pumpTime = stepPress[2]
     else:
         stepCount = stepPress[0]
         pumpPress = 0
