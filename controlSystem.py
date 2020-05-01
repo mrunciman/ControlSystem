@@ -98,9 +98,9 @@ while(flagStop == False):
         SteppyR += RStep # RStep = dStepR scaled for speed (w rounding differences)
         SteppyT += TStep
         # Send step number to arduinos:
-        [realStepL, lhsP] = listenStepPress(lhs, SteppyL)
-        [realStepR, rhsP] = listenStepPress(rhs, SteppyR)
-        [realStepT, topP] = listenStepPress(top, SteppyT)
+        [realStepL, lhsP, timeL] = listenStepPress(lhs, SteppyL)
+        [realStepR, rhsP, timeR] = listenStepPress(rhs, SteppyR)
+        [realStepT, topP, timeT] = listenStepPress(top, SteppyT)
 
 
     except ZeroDivisionError as e:
@@ -129,12 +129,12 @@ while(flagStop == False):
 
     # print("Arduino says: ", realStepR, "   Master says: ", stepR)
     # print("Master says: ", SteppyT)
-    print("Pressure: ", lhsP, rhsP, topP, "  StepT: ", realStepT)
+    print("Pressure: ", lhsP, rhsP, topP, "  StepT: ", timeT)
 
 flagStop = mouseTrack.closeTracker()
-[realStepL, lhsP] = listenStepPress(lhs, "Closed")
-[realStepR, rhsP] = listenStepPress(rhs, "Closed")
-[realStepT, topP] = listenStepPress(top, "Closed")
+[realStepL, lhsP, timeL] = listenStepPress(lhs, "Closed")
+[realStepR, rhsP, timeR] = listenStepPress(rhs, "Closed")
+[realStepT, topP, timeT] = listenStepPress(top, "Closed")
 print(realStepL)
 print(realStepR)
 print(realStepT)

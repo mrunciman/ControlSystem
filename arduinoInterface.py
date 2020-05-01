@@ -54,7 +54,7 @@ def listenStepPress(ser, stepNumber):
     # print("Message: ", message)
     message = message.encode('utf-8')
     ser.write(message)
-    stepPress = ser.read(20)
+    stepPress = ser.read(30)
     stepPress = stepPress.decode('utf-8')
     stepPress = stepPress.split(',')
     # print(stepPress)
@@ -78,10 +78,13 @@ def listenStepPress(ser, stepNumber):
         if stepPress == ['']:
             stepCount = "Zilch" # CHange this later to handle dropped values
             pumpPress = "Dinna ken"
+            pumpTime = "Denner"
         else:
-            stepCount = int(stepPress[0])
+            stepCount = stepPress[0]
             pumpPress = float(stepPress[1])/10
+            pumpTime = stepPress[2]
     else:
         stepCount = stepPress
         pumpPress = 0
-    return stepCount, pumpPress
+        pumpTime = "End"
+    return stepCount, pumpPress, pumpTime
