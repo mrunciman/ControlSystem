@@ -18,7 +18,6 @@ def connect(pumpName, portNumber):
     reply = ""
     port = 'COM%s' % (portNumber)
 
-    # timeout = 0.5*(1/125)
     #Open serial port at given COM port at 115200 baud rate
     ser = serial.Serial(port = port, baudrate = 115200, timeout = 0) 
     message = message.encode('utf-8')    #Encode message
