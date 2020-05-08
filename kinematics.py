@@ -46,7 +46,7 @@ stepsPMM = (StepPerRev*Microsteps)/(Lead) # steps per mm
 stepsPV = stepsPMM/As # Steps per mm^3
 maxSteps = stepsPV*maxV # number of steps needed to fill pouch
 # print(maxSteps)
-timeStep = 0.01 # Inverse of sampling frequency on arduinos
+timeStep = 1/125 # Inverse of sampling frequency on arduinos
 
 ###################################################################
 # Lookup table

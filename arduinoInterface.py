@@ -18,13 +18,14 @@ def connect(pumpName, portNumber):
     reply = ""
     port = 'COM%s' % (portNumber)
 
+    # timeout = 0.5*(1/125)
     #Open serial port at given COM port at 115200 baud rate
-    ser = serial.Serial(port = port, baudrate = 115200, timeout = 0)
-    # time.sleep(1)   
+    ser = serial.Serial(port = port, baudrate = 115200, timeout = 0) 
     message = message.encode('utf-8')    #Encode message
+    time.sleep(1)     #give arduino time to set up (there are delays in arduino code for pressure sensor)
     while(1):
         ser.write(message)
-        time.sleep(1)     #give arduino time to set up (there are delays in arduino code for pressure sensor)
+        # print("Handshake: ", message)
         if ser.in_waiting > 0:
             reply = ser.readline().strip()
             ser.reset_input_buffer()
@@ -32,6 +33,7 @@ def connect(pumpName, portNumber):
             if reply == pumpName:
                 ser.reset_output_buffer()
                 break
+        time.sleep(0.5)     #delay before sending message again
     # return open serial connection to allow pumps to be controlled in main code
     return ser, reply
 
@@ -47,37 +49,28 @@ def listenStepPress(ser, stepNumber):
     # print("Message: ", message)
     message = message.encode('utf-8')
     ser.write(message)
-    stepPress = ser.read(30)
+    x = "e"
+    stepPress = b""
+    while ser.in_waiting == 0:
+        pass
+    # Check for end character
+    while ord(x) != ord("E"):
+        x = ser.read()
+        if x == b"":
+            break
+        elif x == b"E":
+            break
+        stepPress = stepPress + x
     stepPress = stepPress.decode('utf-8')
     stepPress = stepPress.split(',')
-    # print(stepPress)
-    # stepCount = binascii.b2a_uu(stepCount)
-    # stepCount = int.from_bytes(stepCount, "big")
-    # print(stepCount)
-    # comma = ser.read(1)
-    # stepCount = 0
-    # pumpPress = 0
-    # pumpPress = ser.read(4)
-    # pumpPress = int.from_bytes(pumpPress, "big")
-    # print(pumpPress)
-    # print('\n')
-    # time = ser.read(4)
-    # stepPress = ser.readline().strip()
-    # stepPress = stepPress.decode('ascii')
-    # print("Response: ", stepCount, pumpPress, time)
-    # stepPress = stepPress.split(',')
-    ser.reset_input_buffer()
-    if stepNumber != "Closed":
-        if stepPress == ['']:
-            stepCount = "Zilch" # CHange this later to handle dropped values
-            pumpPress = "Dinna ken"
-            pumpTime = "Denner"
-        else:
-            stepCount = stepPress[0]
-            pumpPress = float(stepPress[1])/10
-            pumpTime = stepPress[2]
+    # ser.reset_input_buffer()
+    # ser.reset_output_buffer()
+    if stepPress == ['']:
+        stepCount = "S_Empty" # Change this later to handle dropped values
+        pumpPress = "P_Empty"
+        pumpTime = "T_Empty"
     else:
         stepCount = stepPress[0]
-        pumpPress = 0
-        pumpTime = stepPress[1]
+        pumpPress = float(stepPress[1])/10
+        pumpTime = stepPress[2]
     return stepCount, pumpPress, pumpTime

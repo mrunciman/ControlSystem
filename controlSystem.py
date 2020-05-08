@@ -15,6 +15,7 @@ from arduinoInterface import connect, listenStepPress
 from kinematics import cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLog, ardSave
+import time
 
 
 tHome = 4 # Time in s to go to home position from 0 (flat actuators)
@@ -34,6 +35,8 @@ except KeyboardInterrupt:
     lhs.close()
     rhs.close()
     top.close()
+
+time.sleep(1)
 
 ###########################
 # Calibrate arduinos for zero volume
@@ -138,18 +141,20 @@ while(flagStop == False):
     # print("Frequencies: ", fStepL, fStepR, fStepT)
     # print("Step Number: ", stepL, stepR, stepT)
 
-    # print("Arduino says: ", realStepR, "   Master says: ", stepR)
-    print("Master says: ", StepNoT)
     print("Pressure: ", pressL, pressR, pressT, "  Real: ", realStepT)
+
 
 flagStop = mouseTrack.closeTracker()
 [realStepL, pressL, timeL] = listenStepPress(lhs, "Closed")
 [realStepR, pressR, timeR] = listenStepPress(rhs, "Closed")
 [realStepT, pressT, timeT] = listenStepPress(top, "Closed")
-print(realStepL)
-print(realStepR)
-print(realStepT)
+print(realStepL, pressL, timeL)
+print(realStepR, pressR, timeR)
+print(realStepT, pressT, timeT)
+
+ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
 ardSave()
+
 lhs.close()
 rhs.close()
 top.close()
