@@ -11,35 +11,17 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, listenStepPress
+from arduinoInterface import connect, listenStepPress, listenZero
 from kinematics import cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLog, ardSave
 
-
-tHome = 4 # Time in s to go to home position from 0 (flat actuators)
+############################################################
+# Initialise variables 
 SAMP_FREQ = 100
-# lhs= "Kegs"
-# rhs = "Friel"
-# top = "Kinloch"
-
-try:
-    [lhs, reply] = connect("LHS", 6)
-    print(reply)
-    [rhs, reply] = connect("RHS", 4)
-    print(reply)
-    [top, reply] = connect("TOP", 5)
-    print(reply)
-except KeyboardInterrupt:
-    lhs.close()
-    rhs.close()
-    top.close()
-
-###########################
-# Calibrate arduinos for zero volume
 
 flagStop = False
-#Initial values
+
 currentX = 0
 currentY = 0
 # Target must be cast as immutable type (float, in this case) so that 
@@ -63,10 +45,8 @@ realStepL, realStepR, realStepT = 0, 0, 0
 [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT] = volRate(cVolT, cableT, targetT)
 [OCRL, OCRR, OCRT, LStep, RStep, TStep] = freqScale(fStepL, fStepR, fStepT)
 LStep, RStep, TStep = 0, 0, 0
-fHomeL = stepL/tHome
-fHomeR = stepR/tHome
-fHomeT = stepT/tHome
 
+# Current position
 cStepL = stepL
 cStepR = stepR
 cStepT = stepT
@@ -74,9 +54,45 @@ dStepL, dStepR, dStepT  = 0, 0, 0
 
 StepNoL, StepNoR, StepNoT = 2168, 2168, 2168
 
-######################################################
-# Get response from pumps to confirm volume calibration
+###############################################################
+# Connect to Arduinos
+try:
+    [lhs, reply] = connect("LHS", 6)
+    print(reply)
+    [rhs, reply] = connect("RHS", 4)
+    print(reply)
+    [top, reply] = connect("TOP", 5)
+    print(reply)
+except KeyboardInterrupt:
+    lhs.close()
+    rhs.close()
+    top.close()
 
+#############################################################
+# Calibrate arduinos for zero volume - maintain negative pressure for 5 seconds
+calibL = False
+calibR = False
+calibT = False
+calibration = False
+# IGNORE CALIBRATION FOR NOW TO WOKR ON OTHER THINGS
+# while (calibration != True):
+#     [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+#     [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+#     [realStepT, pressT, timeT] = listenZero(top, calibT)
+#     if (realStepL == "LHS0000"):
+#         calibL = True
+#     if (realStepR == "RHS0000"):
+#         calibR = True
+#     if (realStepT == "TOP0000"):
+#         calibT = True
+#     if (calibL * calibR * calibT == 1):
+#         calibration = True
+#     print(realStepL, pressL)
+#     print(realStepT, pressT)
+
+
+################################################################
+# Begin main loop
 
 # Instantiate class that sets up GUI
 mouseTrack = mouseTracker()
@@ -130,16 +146,14 @@ while(flagStop == False):
     cStepR = StepNoR
     cStepT = StepNoT
     ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
-    # print("Cable lengths: ", targetL, targetR, targetT, tSecs)
-    # print("Cable speeds: ", lhsV, rhsV, topV)
-    # print("Approx speeds: ", speedL, speedR, speedT)
-    # print("Volume rates: ", vDotL, vDotR, vDotT)
-    # print("Syringe speeds: ", dDotL, dDotR, dDotT)
-    # print("Frequencies: ", fStepL, fStepR, fStepT)
-    # print("Step Number: ", stepL, stepR, stepT)
 
     print("Pressure: ", pressL, pressR, pressT, "  Real: ", realStepT)
 
+
+###########################################################################
+# Stop program
+
+# Disable pumps and set them to idle state
 flagStop = mouseTrack.closeTracker()
 [realStepL, pressL, timeL] = listenStepPress(lhs, "Closed")
 [realStepR, pressR, timeR] = listenStepPress(rhs, "Closed")
@@ -148,9 +162,11 @@ print(realStepL, pressL, timeL)
 print(realStepR, pressR, timeR)
 print(realStepT, pressT, timeT)
 
+# Save values gathered from arduinos
 ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
 ardSave()
 
+# Close serial connections
 lhs.close()
 rhs.close()
 top.close()

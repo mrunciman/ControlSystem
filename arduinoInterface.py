@@ -23,16 +23,18 @@ def connect(pumpName, portNumber):
     message = message.encode('utf-8')    #Encode message
     time.sleep(1)     #give arduino time to set up (there are delays in arduino code for pressure sensor)
     while(1):
+        time.sleep(0.5)     #delay before sending message again
         ser.write(message)
         # print("Handshake: ", message)
         if ser.in_waiting > 0:
             reply = ser.readline().strip()
             ser.reset_input_buffer()
             reply = reply.decode('ascii')
+            # print(reply)
             if reply == pumpName:
                 ser.reset_output_buffer()
                 break
-        time.sleep(0.5)     #delay before sending message again
+
     # return open serial connection to allow pumps to be controlled in main code
     return ser, reply
 
@@ -60,8 +62,10 @@ def listenStepPress(ser, stepNumber):
         elif x == b"E":
             break
         stepPress = stepPress + x
+
     stepPress = stepPress.decode('utf-8')
     stepPress = stepPress.split(',')
+    # print(stepPress)
     # ser.reset_input_buffer()
     # ser.reset_output_buffer()
     if stepPress == ['']:
@@ -72,4 +76,39 @@ def listenStepPress(ser, stepNumber):
         stepCount = stepPress[0]
         pumpPress = float(stepPress[1])/10
         pumpTime = stepPress[2]
+    return stepCount, pumpPress, pumpTime
+
+
+def listenZero(ser, pumpZero):
+    x = "e"
+    stepPress = b""
+    if (pumpZero == True):
+        stepCount = 0
+        pumpPress = "Low"
+        pumpTime = "Waiting..."
+    else:
+        while ser.in_waiting == 0:
+            pass
+        # Check for end character
+        while ord(x) != ord("E"):
+            x = ser.read()
+            if x == b"":
+                break
+            elif x == b"E":
+                break
+            stepPress = stepPress + x
+
+        # ser.reset_input_buffer()
+        # ser.reset_output_buffer()
+        if stepPress == b"":
+            stepCount = "S_Empty" # Change this later to handle dropped values
+            pumpPress = "P_Empty"
+            pumpTime = "T_Empty"
+        else:
+            # print(stepPress)
+            stepPress = stepPress.decode('utf-8')
+            stepPress = stepPress.split(',')
+            stepCount = stepPress[0]
+            pumpPress = float(stepPress[1])/10
+            pumpTime = stepPress[2]
     return stepCount, pumpPress, pumpTime
