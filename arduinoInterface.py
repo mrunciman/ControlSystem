@@ -30,7 +30,7 @@ def connect(pumpName, portNumber):
             reply = ser.readline().strip()
             ser.reset_input_buffer()
             reply = reply.decode('ascii')
-            # print(reply)
+
             if reply == pumpName:
                 ser.reset_output_buffer()
                 break

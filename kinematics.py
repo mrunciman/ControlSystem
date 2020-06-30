@@ -54,11 +54,15 @@ timeStep = 1/125 # Inverse of sampling frequency on arduinos
 # Lookup array of equally spaced theta values in interval 0 to pi/2
 numPoints = 10000
 theta = np.linspace(0, mt.pi/2, numPoints)
+# theta = np.linspace(((mt.pi/2)/numPoints), mt.pi/2, numPoints-1)
 # Lookup array of cable contractions/length changes.
-# Using normalised sinc function so divide by pi, as this
-# avoids divide by zero errors when computing np.sin(x)/x
+# Numpy uses unnormalised sinc function so divide by pi. Using sinc
+# avoids divide by zero errors returned when computing np.sin(x)/x
 cableLookup = L0*(1 - np.sinc(theta/mt.pi))
-# volLookup = factV*(theta - np.cos(theta)*np.sin(theta))/(theta**2)
+# Avoid division by zero by prepending volLookup with zero.
+thetaNoZero = theta[1:numPoints]
+volLookup = (thetaNoZero - np.cos(thetaNoZero)*np.sin(thetaNoZero))/(thetaNoZero**2)
+volLookup = np.insert(volLookup, 0, 0, axis=None)
 # From pouch motors:
 # Add correction for when actuators are flat
 # P is pressure, Ce = 5.0e-6 Pa-1
@@ -111,6 +115,7 @@ def cableLengths(x, y):
     r = 0 # millimetre
     # This matrix defines the three instrument attachment points wrt instrument frame
     attP = np.array([[r, -r, 0], [-r, r, 0], [0, r, 0]]) #Not actually how it will look, just for test
+    # Z axis out of screen - conssitent with 'master' controller
 
     # P is the desired position on plane
     P = np.array([[x], [y], [0]])
@@ -119,7 +124,7 @@ def cableLengths(x, y):
     PGI = np.dot(RotGI, attP) + P
     # print(PGI)
     
-    # Entry point array - global frame defined at lhs corner (from behind instrument)
+    # Entry point array - global frame defined at bottom lhs corner (from behind instrument)
     # LHS, RHS, TOP corner coordinates, corners of equilateral of side S
     E = np.array([[0, 0, 0], [S, 0, 0], [0.5*S, S*mt.sin(mt.pi/3), 0]])
     E = np.transpose(E)
@@ -186,13 +191,20 @@ def length2Vol (currentCable, targetCable):
     volume = normV*factV
     # angle = np.interp(volume, volLookup, theta)
     # Find distance syringe pump has to move to reach desired volume
-    lengthSyringe = volume/As   # Convert to stepCount?
+    lengthSyringe = volume/As
     stepCount = round(lengthSyringe*stepsPMM)
-    # stepCount = stepCount*(lengthSyringe/abs(lengthSyringe))
-    # stepCount = int(stepCount)
+
+    # Find discretised actuator length actuator actually commanded to go to:
+    lengthDisc = stepCount/stepsPMM
+    volDisc = lengthDisc*As
+    normVDisc = volDisc/factV
+    angleDisc = np.interp(normVDisc, volLookup, theta)
+    LDisc = L0*mt.sin(angleDisc)/angleDisc
+    LcDisc = L0 - LDisc
+    # print(Lc, LcDisc)
     # Convert from mm^3 to ml
     # volume = volume / 1000
-    return volume, cableSpeed, stepCount
+    return volume, cableSpeed, stepCount, LcDisc
 
 
 
@@ -206,7 +218,7 @@ def volRate(cV, cCable, tCable):
     # USE CABLE SPEED AND INITIAL CABLE LENGTH AS INPUT?
     # Find current and target volume and displacement of syringe
     # [cV, cD] = length2Vol(cCable)
-    [tV, tSpeed, stepNo] = length2Vol(cCable, tCable)
+    [tV, tSpeed, stepNo, LcDisc] = length2Vol(cCable, tCable)
     # Calculate linear approximation of volume rate:
     volDiff = tV-cV
     vDot = (volDiff)/timeStep #timeSecs  # mm^3/s
@@ -220,7 +232,7 @@ def volRate(cV, cCable, tCable):
     # For speed: pulses/mm * mm/s = pulses/s
     fStep = stepsPMM*dDot
 
-    return tV, vDot, dDot, fStep, stepNo, tSpeed
+    return tV, vDot, dDot, fStep, stepNo, tSpeed, LcDisc
 
 
 

@@ -36,13 +36,13 @@ cableL, cableR, cableT = 50, 50, 50
 realStepL, realStepR, realStepT = 0, 0, 0
 
 #Set current volume (ignore tSpeed and step values) 
-[cVolL, tSpeedL, stepL] = length2Vol(cableL, targetL)
-[cVolR, tSpeedR, stepR] = length2Vol(cableR, targetR)
-[cVolT, tSpeedT, stepT] = length2Vol(cableT, targetT)
+[cVolL, tSpeedL, stepL, LcRealL] = length2Vol(cableL, targetL)
+[cVolR, tSpeedR, stepR, LcRealR] = length2Vol(cableR, targetR)
+[cVolT, tSpeedT, stepT, LcRealT] = length2Vol(cableT, targetT)
 
-[tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL] = volRate(cVolL, cableL, targetL)
-[tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR] = volRate(cVolR, cableR, targetR)
-[tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT] = volRate(cVolT, cableT, targetT)
+[tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = volRate(cVolL, cableL, targetL)
+[tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = volRate(cVolR, cableR, targetR)
+[tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = volRate(cVolT, cableT, targetT)
 [OCRL, OCRR, OCRT, LStep, RStep, TStep] = freqScale(fStepL, fStepR, fStepT)
 LStep, RStep, TStep = 0, 0, 0
 
@@ -74,16 +74,17 @@ calibL = False
 calibR = False
 calibT = False
 calibration = False
-# IGNORE CALIBRATION FOR NOW TO WOKR ON OTHER THINGS
+# IGNORE CALIBRATION FOR NOW TO WORK ON OTHER THINGS
 # while (calibration != True):
 #     [realStepL, pressL, timeL] = listenZero(lhs, calibL)
 #     [realStepR, pressR, timeR] = listenZero(rhs, calibR)
 #     [realStepT, pressT, timeT] = listenZero(top, calibT)
-#     if (realStepL == "LHS0000"):
+#     ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
+#     if (realStepL == "0000LHS"):
 #         calibL = True
-#     if (realStepR == "RHS0000"):
+#     if (realStepR == "0000RHS"):
 #         calibR = True
-#     if (realStepT == "TOP0000"):
+#     if (realStepT == "0000TOP"):
 #         calibT = True
 #     if (calibL * calibR * calibT == 1):
 #         calibration = True
@@ -108,9 +109,9 @@ while(flagStop == False):
         # Get cable speeds using Jacobian at current point and calculation of input speed
         # [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
         # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
-        [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL] = volRate(cVolL, cableL, targetL)
-        [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR] = volRate(cVolR, cableR, targetR)
-        [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT] = volRate(cVolT, cableT, targetT)
+        [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = volRate(cVolL, cableL, targetL)
+        [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = volRate(cVolR, cableR, targetR)
+        [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = volRate(cVolT, cableT, targetT)
         # CALCULATE FREQS FROM VALID STEP NUMBER
         # stepL is master position, cStepL is real, speed controlled position.
         dStepL = stepL - cStepL 
@@ -145,9 +146,10 @@ while(flagStop == False):
     cStepL = StepNoL
     cStepR = StepNoR
     cStepT = StepNoT
-    ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
+    ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
 
-    print("Pressure: ", pressL, pressR, pressT, "  Real: ", realStepT)
+    # print("Pressure: ", pressL, pressR, pressT)
+    # print("Real Pos: ", realStepL, realStepR, realStepT)
 
 
 ###########################################################################
@@ -163,7 +165,7 @@ print(realStepR, pressR, timeR)
 print(realStepT, pressT, timeT)
 
 # Save values gathered from arduinos
-ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
+ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
 ardSave()
 
 # Close serial connections
