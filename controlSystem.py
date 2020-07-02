@@ -46,6 +46,10 @@ realStepL, realStepR, realStepT = 0, 0, 0
 [OCRL, OCRR, OCRT, LStep, RStep, TStep] = freqScale(fStepL, fStepR, fStepT)
 LStep, RStep, TStep = 0, 0, 0
 
+# Set initial pressure and calibration variables
+pressL, pressR, pressT = 0, 0, 0
+timeL, timeR, timeT = 0, 0, 0
+
 # Current position
 cStepL = stepL
 cStepR = stepR
@@ -75,21 +79,23 @@ calibR = False
 calibT = False
 calibration = False
 # IGNORE CALIBRATION FOR NOW TO WORK ON OTHER THINGS
-# while (calibration != True):
-#     [realStepL, pressL, timeL] = listenZero(lhs, calibL)
-#     [realStepR, pressR, timeR] = listenZero(rhs, calibR)
-#     [realStepT, pressT, timeT] = listenZero(top, calibT)
-#     ardLog(realStepL, StepNoL, pressL, timeL, realStepR, StepNoR, pressR, timeR, realStepT, StepNoT, pressT, timeT)
-#     if (realStepL == "0000LHS"):
-#         calibL = True
-#     if (realStepR == "0000RHS"):
-#         calibR = True
-#     if (realStepT == "0000TOP"):
-#         calibT = True
-#     if (calibL * calibR * calibT == 1):
-#         calibration = True
-#     print(realStepL, pressL)
-#     print(realStepT, pressT)
+while (calibration != True):
+    # [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+    [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+    # [realStepT, pressT, timeT] = listenZero(top, calibT)
+    # print(realStepL, pressL)
+    print(realStepR, pressR)
+    # print(realStepT, pressT)
+    ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
+    # if (realStepL == "0000LHS"):
+    #     calibL = True
+    if (realStepR == "0000RHS"):
+        calibR = True
+    # if (realStepT == "0000TOP"):
+    #     calibT = True
+    if (1 * calibR * 1 == 1):
+        calibration = True
+
 
 
 ################################################################
@@ -105,6 +111,10 @@ while(flagStop == False):
     try:
         # Do cable and syringe calculations:
         # Get target lengths and Jacobian from target point
+
+        # Manually increment and decrement target X and Y here:
+        targetX = 
+
         [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
         # Get cable speeds using Jacobian at current point and calculation of input speed
         # [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
