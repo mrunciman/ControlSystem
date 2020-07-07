@@ -46,7 +46,7 @@ stepsPMM = (StepPerRev*Microsteps)/(Lead) # steps per mm
 stepsPV = stepsPMM/As # Steps per mm^3
 maxSteps = stepsPV*maxV # number of steps needed to fill pouch
 # print(maxSteps)
-timeStep = 1/125 # Inverse of sampling frequency on arduinos
+timeStep = 6/125 # Inverse of sampling frequency on arduinos
 
 ###################################################################
 # Lookup table
@@ -287,7 +287,7 @@ def cableSpeeds (cX, cY, tX, tY, JacoPlus, timeSecs):
     by sampling frequency of master. JacoPlus is pseudoinverse of
     Jacobian at a given point.
     """
-    timeSecs = 0.01
+    timeSecs = timeStep
 
     # TARGET POINT, CURRENT POINT, TARGET SPEED ARE INPUTS
     # USED TO FIND CABLE LENGTHS AND RATE OF CABLE LENGTH CHANGE

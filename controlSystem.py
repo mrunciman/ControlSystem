@@ -15,10 +15,11 @@ from arduinoInterface import connect, listenStepPress, listenZero
 from kinematics import cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLog, ardSave
+import time
 
 ############################################################
 # Initialise variables 
-SAMP_FREQ = 100
+SAMP_FREQ = 125/6
 
 flagStop = False
 
@@ -78,34 +79,37 @@ calibL = False
 calibR = False
 calibT = False
 calibration = False
-# IGNORE CALIBRATION FOR NOW TO WORK ON OTHER THINGS
-while (calibration != True):
-    # [realStepL, pressL, timeL] = listenZero(lhs, calibL)
-    [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+# Calibration ON if True below:
+while (calibration != False):
+    [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+    # [realStepR, pressR, timeR] = listenZero(rhs, calibR)
     # [realStepT, pressT, timeT] = listenZero(top, calibT)
-    # print(realStepL, pressL)
-    print(realStepR, pressR)
+    print(realStepL, pressL)
+    # print(realStepR, pressR)
     # print(realStepT, pressT)
     ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
-    # if (realStepL == "0000LHS"):
-    #     calibL = True
-    if (realStepR == "0000RHS"):
-        calibR = True
+    if (realStepL == "0000LHS"):
+        calibL = True
+    # if (realStepR == "0000RHS"):
+        # calibR = True
     # if (realStepT == "0000TOP"):
     #     calibT = True
-    if (1 * calibR * 1 == 1):
+    if (calibL * 1 * 1 == 1):
         calibration = True
 
 
 
 ################################################################
 # Begin main loop
-
+targetXTest = 0
+targetYTest = 0
+toggleDirection = 1
 # Instantiate class that sets up GUI
 mouseTrack = mouseTracker()
 # First attempt at main loop
 mouseTrack.createTracker()
 while(flagStop == False):
+    tick = time.perf_counter()
     [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
     tSecs = tMillis/1000
     try:
@@ -113,7 +117,15 @@ while(flagStop == False):
         # Get target lengths and Jacobian from target point
 
         # Manually increment and decrement target X and Y here:
-        targetX = 
+        # targetY = 0
+        # targetXTest = targetXTest + toggleDirection*0.1
+        # targetXTest = int(10*targetXTest)/10
+        # if targetXTest >= 45:
+        #     toggleDirection = toggleDirection*-1
+        # if targetXTest <= 0:
+        #     toggleDirection = toggleDirection*-1
+        # print(targetXTest)
+        
 
         [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
         # Get cable speeds using Jacobian at current point and calculation of input speed
@@ -139,7 +151,6 @@ while(flagStop == False):
         [realStepR, pressR, timeR] = listenStepPress(rhs, StepNoR)
         [realStepT, pressT, timeT] = listenStepPress(top, StepNoT)
 
-
     except ZeroDivisionError as e:
         pass
 
@@ -157,7 +168,9 @@ while(flagStop == False):
     cStepR = StepNoR
     cStepT = StepNoT
     ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
-
+    tock = time.perf_counter()
+    elapsed = tock-tick
+    # print(f"{elapsed:0.4f}")
     # print("Pressure: ", pressL, pressR, pressT)
     # print("Real Pos: ", realStepL, realStepR, realStepT)
 
