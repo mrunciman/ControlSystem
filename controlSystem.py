@@ -18,7 +18,7 @@ from ardLogger import ardLog, ardSave
 
 ############################################################
 # Initialise variables 
-SAMP_FREQ = 100
+SAMP_FREQ = 125/6
 
 flagStop = False
 
@@ -26,8 +26,8 @@ currentX = 0
 currentY = 0
 # Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
-targetX = 25.0
-targetY = 14.435
+targetX = 0.1
+targetY = 0.1
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
@@ -78,23 +78,22 @@ calibL = False
 calibR = False
 calibT = False
 calibration = False
-print("Begin calibration:")
 # Calibration ON if TRUE below:
 while (calibration != True):
-    # [realStepL, pressL, timeL] = listenZero(lhs, calibL)
-    [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+    [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+    # [realStepR, pressR, timeR] = listenZero(rhs, calibR)
     # [realStepT, pressT, timeT] = listenZero(top, calibT)
-    # print(realStepL, pressL)
-    print(realStepR, pressR)
+    print(realStepL, pressL)
+    # print(realStepR, pressR)
     # print(realStepT, pressT)
     ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
-    # if (realStepL == "0000LHS"):
-    #     calibL = True
-    if (realStepR == "0000RHS"):
-        calibR = True
+    if (realStepL == "0000LHS"):
+        calibL = True
+    # if (realStepR == "0000RHS"):
+    #     calibR = True
     # if (realStepT == "0000TOP"):
     #     calibT = True
-    if (1 * calibR * 1 == 1):
+    if (calibL * 1 * 1 == 1):
         calibration = True
 
 
@@ -112,14 +111,16 @@ while(flagStop == False):
         # Do cable and syringe calculations:
         # Get target lengths and Jacobian from target point
         
-        # Manually set targets here?
+        # Manually set targets here
         targetY = 0
         targetX = 50*round(targetX/5)/10
-        # print(targetY)
+        if targetX <= 5:
+            targetX = 5.0
+        elif targetX >= 45:
+            targetX = 45.0
+        # print(targetX)
 
         [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
-        print(targetR)
-
         # Get cable speeds using Jacobian at current point and calculation of input speed
         # [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
         # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
