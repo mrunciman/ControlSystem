@@ -51,6 +51,12 @@ vts = vts.reshape((-1,1,2))
 radius = 3
 # Create an 2n+1 pixel side square around current point
 n = 10
+
+font = cv2.FONT_HERSHEY_SIMPLEX
+fontscale = 0.5
+colour = (0, 128, 0)
+thick = 1
+
 class mouseTracker:
 
     def __init__(self):
@@ -160,6 +166,9 @@ class mouseTracker:
     def iterateTracker(self):
         # Bind drawCables mouse callback function to window
         cv2.setMouseCallback(windowName, self.drawCables)
+        posText = "({:.2f}, {:.2f})".format(self.xCoord, self.yCoord)
+        placement = (self.xPix-60, self.yPix-15)
+        cv2.putText(bkGd, posText, placement, font, fontscale, colour, thick, cv2.LINE_AA)
         cv2.imshow(windowName, bkGd)
         if cv2.waitKey(20) & 0xFF == 27:
             self.stopFlag = True
