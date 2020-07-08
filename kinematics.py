@@ -86,7 +86,7 @@ PRESCALER = 8
 # numBits = 16
 # OCR = np.linspace(0, 2**numBits, (2**numBits)+1)
 # f8 = CLOCK_FREQ/(PRESCALER*(OCR+1))
-MAX_FREQ = 2000
+MAX_FREQ = 1500
 TWO2_16 = 2**16
 
 

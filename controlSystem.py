@@ -80,7 +80,7 @@ calibR = False
 calibT = False
 calibration = False
 # Calibration ON if True below:
-while (calibration != False):
+while (calibration != True):
     [realStepL, pressL, timeL] = listenZero(lhs, calibL)
     # [realStepR, pressR, timeR] = listenZero(rhs, calibR)
     # [realStepT, pressT, timeT] = listenZero(top, calibT)
@@ -117,14 +117,16 @@ while(flagStop == False):
         # Get target lengths and Jacobian from target point
 
         # Manually increment and decrement target X and Y here:
-        # targetY = 0
-        # targetXTest = targetXTest + toggleDirection*0.1
-        # targetXTest = int(10*targetXTest)/10
-        # if targetXTest >= 45:
-        #     toggleDirection = toggleDirection*-1
-        # if targetXTest <= 0:
-        #     toggleDirection = toggleDirection*-1
-        # print(targetXTest)
+        # Sampling frequency is ~20.8333 Hz, so use this to find speed.
+        targetY = 0
+        targetXTest = targetXTest + toggleDirection*0.1
+        targetXTest = round(10*targetXTest)/10
+        if targetXTest >= 45:
+            toggleDirection = -1
+        if targetXTest <= 5:
+            toggleDirection = 1
+        targetX = targetXTest
+        print(targetX)
         
 
         [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)

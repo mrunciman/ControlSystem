@@ -52,6 +52,7 @@ def listenStepPress(ser, stepNumber):
     ser.write(message)
     x = "e"
     stepPress = b""
+    # Wait here for reply - source of delay
     while ser.in_waiting == 0:
         pass
     # Check for end character
