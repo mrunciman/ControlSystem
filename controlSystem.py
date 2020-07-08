@@ -101,7 +101,7 @@ while (calibration != True):
 
 ################################################################
 # Begin main loop
-targetXTest = 0
+targetXTest = 45
 targetYTest = 0
 toggleDirection = 1
 # Instantiate class that sets up GUI
@@ -119,12 +119,12 @@ while(flagStop == False):
         # Manually increment and decrement target X and Y here:
         # Sampling frequency is ~20.8333 Hz, so use this to find speed.
         targetY = 0
-        targetXTest = targetXTest + toggleDirection*0.1
-        targetXTest = round(10*targetXTest)/10
         if targetXTest >= 45:
             toggleDirection = -1
         if targetXTest <= 5:
             toggleDirection = 1
+        targetXTest = targetXTest + toggleDirection*0.1
+        targetXTest = round(10*targetXTest)/10
         targetX = targetXTest
         print(targetX)
         
