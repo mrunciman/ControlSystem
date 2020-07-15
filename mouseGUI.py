@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import csv
 import time
+import math as mt
 from kinematics import kine
 import matplotlib.path as mpltPath
 
@@ -31,7 +32,7 @@ class mouseTracker(kine):
         self.resolution = 0.03
         self.sideLength = kine.sideLength0
         self.canvasX = int(self.sideLength/self.resolution)
-        self.canvasY = int(1.7321*(self.canvasX/2))
+        self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
         self.centreX = int(self.canvasX/2)
         self.centreY = int(self.canvasY - 0.5774*(self.canvasX/2))
         # Create background image
@@ -50,12 +51,10 @@ class mouseTracker(kine):
         # Create an 2num+1 pixel side square around current point
         self.num = 10
 
-
-
         # Give initial values for when class instance is made
         # Cast coordinates as floats for immutability, which allows tracking
-        self.xCoord = self.sideLength*0.9#sideLength*0.9#float(centreX*resolution)
-        self.yCoord = 1#float(0.5774*centreX*resolution)#
+        self.xCoord = self.sideLength*0.9#float(self.centreX*self.resolution)#
+        self.yCoord = 1#float(mt.tan(mt.pi/6)*self.centreX*self.resolution)#
         self.xPix = int(self.xCoord/self.resolution)#centreX#750#int(self.xCoord/resolution)#
         self.yPix = self.canvasY - int(self.yCoord/self.resolution)#centreY#canvasY-5#
         self.mouseDown = False

@@ -18,6 +18,8 @@ from ardLogger import ardLog, ardSave
 
 # Initialise kinematics class:
 kine = kine()
+# Instantiate GUI class
+mouseTrack = mouseTracker()
 
 ############################################################
 # Initialise variables 
@@ -29,8 +31,8 @@ currentX = 0
 currentY = 0
 # Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
-targetX = kine.sideLength*0.9
-targetY = 0.1
+targetX = mouseTrack.xCoord
+targetY = mouseTrack.yCoord
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
@@ -103,10 +105,9 @@ while (calibration != False):
 ################################################################
 # Begin main loop
 
-# Instantiate class that sets up GUI
-mouseTrack = mouseTracker()
-# First attempt at main loop
+# Bring up GUI
 mouseTrack.createTracker()
+
 while(flagStop == False):
     [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
     tSecs = tMillis/1000
