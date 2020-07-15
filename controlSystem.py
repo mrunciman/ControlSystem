@@ -118,12 +118,13 @@ while(flagStop == False):
         # Get target lengths and Jacobian from target point
         
         # Manually set targets here
-        targetY = 0
-        targetX = kine.sideLength*round(targetX/(kine.sideLength/10))/10
+        # targetY = 0
+        # targetX = kine.sideLength*round(targetX/(kine.sideLength/10))/10
         if targetX <= kine.sideLength*0.1:
             targetX = kine.sideLength*0.1
         elif targetX >= kine.sideLength*0.9:
             targetX = kine.sideLength*0.9
+        # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
         print(targetX)
 
         [targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)

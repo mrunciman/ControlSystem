@@ -19,7 +19,6 @@ with open(fileName, mode ='w', newline='') as posLog1:
     logger1 = csv.writer(posLog1)
     logger1.writerow(['Event', 'X', 'Y', 'Timestamp', 'ms Since Last'])
 
-
 font = cv2.FONT_HERSHEY_SIMPLEX
 fontscale = 0.5
 colour = (0, 128, 0)
