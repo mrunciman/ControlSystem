@@ -12,13 +12,16 @@ Set step frequency of individual pumps to alter speed
 """
 
 from arduinoInterface import connect, listenStepPress, listenZero
-from kinematics import cableLengths, volRate, freqScale, length2Vol
+from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLog, ardSave
 
+# Initialise kinematics class:
+kine = kine()
+
 ############################################################
 # Initialise variables 
-SAMP_FREQ = 125/6
+SAMP_FREQ = 1/kine.timeStep
 
 flagStop = False
 
@@ -26,24 +29,24 @@ currentX = 0
 currentY = 0
 # Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
-targetX = 0.1
+targetX = kine.sideLength*0.9
 targetY = 0.1
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
-cableL, cableR, cableT = 50, 50, 50
-[targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
+cableL, cableR, cableT = kine.sideLength, kine.sideLength, kine.sideLength
+[targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)
 realStepL, realStepR, realStepT = 0, 0, 0
 
 # Set current volume (ignore tSpeed and step values) 
-[cVolL, tSpeedL, stepL, LcRealL] = length2Vol(cableL, targetL)
-[cVolR, tSpeedR, stepR, LcRealR] = length2Vol(cableR, targetR)
-[cVolT, tSpeedT, stepT, LcRealT] = length2Vol(cableT, targetT)
+[cVolL, tSpeedL, stepL, LcRealL] = kine.length2Vol(cableL, targetL)
+[cVolR, tSpeedR, stepR, LcRealR] = kine.length2Vol(cableR, targetR)
+[cVolT, tSpeedT, stepT, LcRealT] = kine.length2Vol(cableT, targetT)
 
-[tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = volRate(cVolL, cableL, targetL)
-[tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = volRate(cVolR, cableR, targetR)
-[tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = volRate(cVolT, cableT, targetT)
-[OCRL, OCRR, OCRT, LStep, RStep, TStep] = freqScale(fStepL, fStepR, fStepT)
+[tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = kine.volRate(cVolL, cableL, targetL)
+[tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = kine.volRate(cVolR, cableR, targetR)
+[tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = kine.volRate(cVolT, cableT, targetT)
+[OCRL, OCRR, OCRT, LStep, RStep, TStep] = kine.freqScale(fStepL, fStepR, fStepT)
 LStep, RStep, TStep = 0, 0, 0
 
 # Set initial pressure and calibration variables
@@ -56,7 +59,7 @@ cStepR = stepR
 cStepT = stepT
 dStepL, dStepR, dStepT  = 0, 0, 0
 
-StepNoL, StepNoR, StepNoT = 2168, 2168, 2168
+StepNoL, StepNoR, StepNoT = stepL, stepR, stepT
 
 ###############################################################
 # Connect to Arduinos
@@ -79,7 +82,7 @@ calibR = False
 calibT = False
 calibration = False
 # Calibration ON if TRUE below:
-while (calibration != True):
+while (calibration != False):
     [realStepL, pressL, timeL] = listenZero(lhs, calibL)
     # [realStepR, pressR, timeR] = listenZero(rhs, calibR)
     # [realStepT, pressT, timeT] = listenZero(top, calibT)
@@ -113,20 +116,20 @@ while(flagStop == False):
         
         # Manually set targets here
         targetY = 0
-        targetX = 50*round(targetX/5)/10
-        if targetX <= 5:
-            targetX = 5.0
-        elif targetX >= 45:
-            targetX = 45.0
-        # print(targetX)
+        targetX = kine.sideLength*round(targetX/(kine.sideLength/10))/10
+        if targetX <= kine.sideLength*0.1:
+            targetX = kine.sideLength*0.1
+        elif targetX >= kine.sideLength*0.9:
+            targetX = kine.sideLength*0.9
+        print(targetX)
 
-        [targetL, targetR, targetT, tJpinv] = cableLengths(targetX, targetY)
+        [targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)
         # Get cable speeds using Jacobian at current point and calculation of input speed
         # [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
         # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
-        [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = volRate(cVolL, cableL, targetL)
-        [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = volRate(cVolR, cableR, targetR)
-        [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = volRate(cVolT, cableT, targetT)
+        [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = kine.volRate(cVolL, cableL, targetL)
+        [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = kine.volRate(cVolR, cableR, targetR)
+        [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = kine.volRate(cVolT, cableT, targetT)
         # CALCULATE FREQS FROM VALID STEP NUMBER
         # stepL is master position, cStepL is real, speed controlled position.
         dStepL = stepL - cStepL 
@@ -135,7 +138,7 @@ while(flagStop == False):
         fStepL = dStepL*SAMP_FREQ
         fStepR = dStepR*SAMP_FREQ
         fStepT = dStepT*SAMP_FREQ
-        [OCRL, OCRR, OCRT, LStep, RStep, TStep] = freqScale(fStepL, fStepR, fStepT)
+        [OCRL, OCRR, OCRT, LStep, RStep, TStep] = kine.freqScale(fStepL, fStepR, fStepT)
         StepNoL += LStep
         StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
         StepNoT += TStep
