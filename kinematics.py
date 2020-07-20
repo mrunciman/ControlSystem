@@ -31,8 +31,8 @@ class kine:
         self.muscleWidth = 30
         # Number of length subdivisions
         self.numLs = 3
-        # Syringe cross sectional area, diameter = 30 mm
-        self.As = mt.pi*(15**2) # mm^2
+        # Syringe cross sectional area, diameter = 26.5 mm
+        self.As = mt.pi*(26.5/2)**2 # mm^2
         # Real volume calc: there are numLs beams of length L0/numLs
         self.factV = (self.muscleWidth*(self.L0)**2)/(2*self.numLs)
         self.maxV = self.factV*(2/mt.pi)
