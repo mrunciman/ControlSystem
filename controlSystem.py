@@ -33,7 +33,11 @@ currentY = 0
 # Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
 targetX = mouseTrack.xCoord
+targetXTest = targetX
 targetY = mouseTrack.yCoord
+toggleDirection = 1
+delayCount = 0
+delayLim = 100
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
@@ -122,7 +126,33 @@ while(flagStop == False):
         # Discretise input:
         # targetY = 0
         # targetX = kine.sideLength*round(targetX/(kine.sideLength/10))/10
-        
+
+        # Oscillate input between 10% and 90%
+        # Sampling frequency is ~20.8333 Hz, so use this to find speed.
+        targetY = 0
+        if targetXTest >= kine.sideLength*0.9:
+            targetXTest = kine.sideLength*0.9
+            if delayCount < delayLim:
+                delayCount += 1
+            else:
+                toggleDirection = -1
+                delayCount = 0
+                targetXTest = targetXTest + toggleDirection*0.1
+        elif targetXTest <= kine.sideLength*0.1:
+            targetXTest = kine.sideLength*0.1
+            if delayCount < delayLim:
+                delayCount += 1
+            else:
+                toggleDirection = 1
+                delayCount = 0
+                targetXTest = targetXTest + toggleDirection*0.1
+        else:
+            targetXTest = targetXTest + toggleDirection*0.1
+        # Ensure 1 deciaml place
+        targetXTest = round(10*targetXTest)/10 
+        targetX = targetXTest
+
+        # Limit input
         if targetX <= kine.sideLength*0.1:
             targetX = kine.sideLength*0.1
         elif targetX >= kine.sideLength*0.9:
