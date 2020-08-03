@@ -52,8 +52,8 @@ class mouseTracker(kine):
 
         # Give initial values for when class instance is made
         # Cast coordinates as floats for immutability, which allows tracking
-        self.xCoord = self.sideLength*0.9#float(self.centreX*self.resolution)#
-        self.yCoord = 1#float(mt.tan(mt.pi/6)*self.centreX*self.resolution)#
+        self.xCoord = self.sideLength*0.92#float(self.centreX*self.resolution)#
+        self.yCoord = 0.5#float(mt.tan(mt.pi/6)*self.centreX*self.resolution)#
         self.xPix = int(self.xCoord/self.resolution)#centreX#750#int(self.xCoord/resolution)#
         self.yPix = self.canvasY - int(self.yCoord/self.resolution)#centreY#canvasY-5#
         self.mouseDown = False

@@ -32,10 +32,12 @@ class kine:
         # Number of length subdivisions
         self.numLs = 3
         # Syringe cross sectional area, diameter = 26.5 mm
-        self.As = mt.pi*(26.5/2)**2 # mm^2
+        self.As = mt.pi*(13.25**2) # mm^2
         # Real volume calc: there are numLs beams of length L0/numLs
         self.factV = (self.muscleWidth*(self.L0)**2)/(2*self.numLs)
-        self.maxV = self.factV*(2/mt.pi)
+        self.volFactor = 0.90 #12.6195/15.066
+        self.factAng = 1#75/90
+        self.maxV = self.factV*((mt.pi/2*self.factAng) - mt.cos((mt.pi/2*self.factAng))*mt.sin((mt.pi/2*self.factAng)))/((mt.pi/2*self.factAng)**2)
 
         # For step count:
         # Mapping from step to 1 revolution = 200 steps
@@ -78,7 +80,7 @@ class kine:
         # Lookup array of cable contractions/length changes.
         # Numpy uses unnormalised sinc function so divide by pi. Using sinc
         # avoids divide by zero errors returned when computing np.sin(x)/x
-        self.cableLookup = self.L0*(1 - np.sinc(self.theta/mt.pi))
+        self.cableLookup = self.L0*(1 - np.sinc(self.theta/mt.pi)) # Lc lookup
         # Avoid division by zero by prepending volLookup with zero.
         self.thetaNoZero = self.theta[1:self.numPoints]
         self.volLookup = (self.thetaNoZero - np.cos(self.thetaNoZero)*np.sin(self.thetaNoZero))/(self.thetaNoZero**2)
@@ -191,19 +193,27 @@ class kine:
         angle = np.interp(Lc, self.cableLookup, self.theta)
         # Calculate normalised volume of a beam of arbitrary size
         normV = (angle - mt.cos(angle)*mt.sin(angle))/(angle**2)    ### FILTER OUT ANGLE = 0 ERRORS
+        # normComp = ((angle*self.factAng) - mt.cos((angle*self.factAng))*mt.sin((angle*self.factAng)))/((angle*self.factAng)**2)
         # print(angle)
         # Real volume calc: multiply theta-dependent part of 
-        # volume by constant geometry-dependent factor 
+        # volume by constant geometry-dependent factor
+        # self.volFactor = 0.85 + 0.15*mt.cos(angle)
+        self.volFactor = 1 - 0.1*(angle/(mt.pi/2))
         volume = normV*self.factV
+        volComp = volume*self.volFactor
+        # volComp = normComp*self.factV
+
         # angle = np.interp(volume, volLookup, theta)
         # Find distance syringe pump has to move to reach desired volume
         lengthSyringe = volume/self.As
+        lenComp = volComp/self.As
         # print(volume/1000)
 
-        stepCount = round(lengthSyringe*self.stepsPMM)
+        stepCountComp = round(lenComp*self.stepsPMM)
+        stepCountUncomp = round(lengthSyringe*self.stepsPMM)
 
         # Find discretised actuator length actuator actually commanded to go to:
-        lengthDisc = stepCount/self.stepsPMM
+        lengthDisc = stepCountUncomp/self.stepsPMM
         volDisc = lengthDisc*self.As
         normVDisc = volDisc/self.factV
         angleDisc = np.interp(normVDisc, self.volLookup, self.theta)
@@ -212,7 +222,7 @@ class kine:
         # print(Lc, LcDisc)
         # Convert from mm^3 to ml
         # volume = volume / 1000
-        return volume, cableSpeed, stepCount, LcDisc
+        return volComp, cableSpeed, stepCountComp, LcDisc, angleDisc
 
 
 
@@ -226,7 +236,7 @@ class kine:
         # USE CABLE SPEED AND INITIAL CABLE LENGTH AS INPUT?
         # Find current and target volume and displacement of syringe
         # [cV, cD] = length2Vol(cCable)
-        [tV, tSpeed, stepNo, LcDisc] = self.length2Vol(cCable, tCable)
+        [tV, tSpeed, stepNo, LcDisc, angleDisc] = self.length2Vol(cCable, tCable)
         # Calculate linear approximation of volume rate:
         volDiff = tV-cV
         vDot = (volDiff)/self.timeStep #timeSecs  # mm^3/s
@@ -240,7 +250,7 @@ class kine:
         # For speed: pulses/mm * mm/s = pulses/s
         fStep = self.stepsPMM*dDot
 
-        return tV, vDot, dDot, fStep, stepNo, tSpeed, LcDisc
+        return tV, vDot, dDot, fStep, stepNo, tSpeed, LcDisc, angleDisc
 
 
 

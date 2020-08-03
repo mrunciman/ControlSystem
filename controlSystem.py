@@ -38,23 +38,24 @@ targetY = mouseTrack.yCoord
 toggleDirection = 1
 delayCount = 0
 delayLim = 100
-inLim1 = 0.6 # 60% of side length
-inLim2 = 0.9 # 90% of side length
+inLim1 = 0.32 # 32% of side length (17 mm contraction)
+inLim2 = 0.92 # 92% of side length (2 mm contraction)
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
 cableL, cableR, cableT = kine.sideLength, kine.sideLength, kine.sideLength
 [targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)
 realStepL, realStepR, realStepT = 0, 0, 0
+angleL, angleR, angleT = 0, 0, 0
 
 # Set current volume (ignore tSpeed and step values) 
-[cVolL, tSpeedL, stepL, LcRealL] = kine.length2Vol(cableL, targetL)
-[cVolR, tSpeedR, stepR, LcRealR] = kine.length2Vol(cableR, targetR)
-[cVolT, tSpeedT, stepT, LcRealT] = kine.length2Vol(cableT, targetT)
+[cVolL, tSpeedL, stepL, LcRealL, angleL] = kine.length2Vol(cableL, targetL)
+[cVolR, tSpeedR, stepR, LcRealR, angleR] = kine.length2Vol(cableR, targetR)
+[cVolT, tSpeedT, stepT, LcRealT, angleT] = kine.length2Vol(cableT, targetT)
 
-[tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = kine.volRate(cVolL, cableL, targetL)
-[tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = kine.volRate(cVolR, cableR, targetR)
-[tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = kine.volRate(cVolT, cableT, targetT)
+[tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, targetL)
+[tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, targetR)
+[tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, targetT)
 [OCRL, OCRR, OCRT, LStep, RStep, TStep] = kine.freqScale(fStepL, fStepR, fStepT)
 LStep, RStep, TStep = 0, 0, 0
 
@@ -91,35 +92,45 @@ calibR = False
 calibT = False
 calibration = False
 # Calibration ON if TRUE below:
-while (calibration != False):
-    [realStepL, pressL, timeL] = listenZero(lhs, calibL)
-    # [realStepR, pressR, timeR] = listenZero(rhs, calibR)
-    # [realStepT, pressT, timeT] = listenZero(top, calibT)
-    print(realStepL, pressL)
-    # print(realStepR, pressR)
-    # print(realStepT, pressT)
-    ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
-    if (realStepL == "0000LHS"):
-        calibL = True
-    # if (realStepR == "0000RHS"):
-    #     calibR = True
-    # if (realStepT == "0000TOP"):
-    #     calibT = True
-    if (calibL * 1 * 1 == 1):
-        calibration = True
-
+while (calibration != True):
+    try:
+        [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+        # [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+        # [realStepT, pressT, timeT] = listenZero(top, calibT)
+        print(realStepL, pressL)
+        # print(realStepR, pressR)
+        # print(realStepT, pressT)
+        if (realStepL == "0000LHS"):
+            calibL = True
+        # if (realStepR == "0000RHS"):
+        #     calibR = True
+        # if (realStepT == "0000TOP"):
+        #     calibT = True
+        if (calibL * 1 * 1 == 1):
+            calibration = True
+            # Send 0s instead of StepNo as signal that calibration done
+            ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
+                realStepR, LcRealR, angleR, 0, pressR, timeR,\
+                realStepT, LcRealT, angleT, 0, pressT, timeT)
+        else:
+            ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+                realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
+                realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+    except Exception: # Find out what errors are expected and put them here
+        ardSave()
 
 ################################################################
 # Begin main loop
 
 # Bring up GUI
 mouseTrack.createTracker()
+try:
+    while(flagStop == False):
 
-while(flagStop == False):
-    tick = time.perf_counter()
-    [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
-    tSecs = tMillis/1000
-    try:
+        tick = time.perf_counter()
+        [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
+        tSecs = tMillis/1000
+
         # Do cable and syringe calculations:
         # Get target lengths and Jacobian from target point
         
@@ -140,6 +151,7 @@ while(flagStop == False):
                 toggleDirection = -1
                 delayCount = 0
                 targetXTest = targetXTest + toggleDirection*0.1
+
         elif targetXTest <= kine.sideLength*inLim1:
             targetXTest = kine.sideLength*inLim1
             if delayCount < delayLim:
@@ -155,10 +167,10 @@ while(flagStop == False):
         targetX = targetXTest
 
         # Limit input
-        if targetX <= kine.sideLength*0.1:
-            targetX = kine.sideLength*0.1
-        elif targetX >= kine.sideLength*0.9:
-            targetX = kine.sideLength*0.9
+        if targetX <= kine.sideLength*inLim1:
+            targetX = kine.sideLength*inLim1
+        elif targetX >= kine.sideLength*inLim2:
+            targetX = kine.sideLength*inLim2
         # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
         print(targetX)
 
@@ -166,9 +178,9 @@ while(flagStop == False):
         # Get cable speeds using Jacobian at current point and calculation of input speed
         # [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
         # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
-        [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL] = kine.volRate(cVolL, cableL, targetL)
-        [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR] = kine.volRate(cVolR, cableR, targetR)
-        [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT] = kine.volRate(cVolT, cableT, targetT)
+        [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, targetL)
+        [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, targetR)
+        [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, targetT)
         # CALCULATE FREQS FROM VALID STEP NUMBER
         # stepL is master position, cStepL is real, speed controlled position.
         dStepL = stepL - cStepL 
@@ -186,28 +198,32 @@ while(flagStop == False):
         [realStepR, pressR, timeR] = listenStepPress(rhs, StepNoR)
         [realStepT, pressT, timeT] = listenStepPress(top, StepNoT)
 
-    except ZeroDivisionError as e:
-        pass
+        # Update current position, cable lengths, and volumes as previous targets
+        cJpinv = tJpinv
+        currentX = targetX
+        currentY = targetY
+        cableL = targetL
+        cableR = targetR
+        cableT = targetT
+        cVolL = tVolL
+        cVolR = tVolR
+        cVolT = tVolT
+        cStepL = StepNoL
+        cStepR = StepNoR
+        cStepT = StepNoT
+        ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+            realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
+            realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+        tock = time.perf_counter()
+        elapsed = tock-tick
+        # print(f"{elapsed:0.4f}")
+        # print("Pressure: ", pressL, pressR, pressT)
+        # print("Real Pos: ", realStepL, realStepR, realStepT)
 
-    # Update current position, cable lengths, and volumes as previous targets
-    cJpinv = tJpinv
-    currentX = targetX
-    currentY = targetY
-    cableL = targetL
-    cableR = targetR
-    cableT = targetT
-    cVolL = tVolL
-    cVolR = tVolR
-    cVolT = tVolT
-    cStepL = StepNoL
-    cStepR = StepNoR
-    cStepT = StepNoT
-    ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
-    tock = time.perf_counter()
-    elapsed = tock-tick
-    # print(f"{elapsed:0.4f}")
-    # print("Pressure: ", pressL, pressR, pressT)
-    # print("Real Pos: ", realStepL, realStepR, realStepT)
+except ZeroDivisionError:
+    pass
+except Exception:
+    ardSave()
 
 
 ###########################################################################
@@ -223,7 +239,9 @@ print(realStepR, pressR, timeR)
 print(realStepT, pressT, timeT)
 
 # Save values gathered from arduinos
-ardLog(realStepL, LcRealL, StepNoL, pressL, timeL, realStepR, LcRealR, StepNoR, pressR, timeR, realStepT, LcRealT, StepNoT, pressT, timeT)
+ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+    realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
+    realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
 ardSave()
 
 # Close serial connections
