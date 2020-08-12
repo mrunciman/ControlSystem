@@ -40,7 +40,7 @@ def connect(pumpName, portNumber):
 
 
 
-def listenStepPress(ser, stepNumber):
+def sendStep(ser, stepNumber):
     """
     This function sends ideal position (stepNumber) then receives
     the real step count (stepCount) from arduino.
@@ -50,11 +50,20 @@ def listenStepPress(ser, stepNumber):
     # print("Message: ", message)
     message = message.encode('utf-8')
     ser.write(message)
+    return
+
+
+
+
+def listenReply(ser):
     x = "e"
     stepPress = b""
+    noBytes = 0
     # Wait here for reply - source of delay
-    while ser.in_waiting == 0:
-        pass
+    while noBytes == 0:
+        noBytes = ser.in_waiting
+    # Read all bytes in input buffer
+    # stepPress = ser.read(noBytes)
     # Check for end character
     while ord(x) != ord("E"):
         x = ser.read()
@@ -67,8 +76,8 @@ def listenStepPress(ser, stepNumber):
     stepPress = stepPress.decode('utf-8')
     stepPress = stepPress.split(',')
     # print(stepPress)
-    # ser.reset_input_buffer()
-    # ser.reset_output_buffer()
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
     if stepPress == ['']:
         stepCount = "S_Empty" # Change this later to handle dropped values
         pumpPress = "P_Empty"

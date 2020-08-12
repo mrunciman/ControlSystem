@@ -35,7 +35,8 @@ class kine:
         self.As = mt.pi*(13.25**2) # mm^2
         # Real volume calc: there are numLs beams of length L0/numLs
         self.factV = (self.muscleWidth*(self.L0)**2)/(2*self.numLs)
-        self.volFactor = 0.90 #12.6195/15.066
+        self.volFactor = 0.86 #12.6195/15.066 # Ratio of real volume to theoretical volume
+        self.calFactor = 0.06 # % of max vol still in actuator at calibration
         self.factAng = 1#75/90
         self.maxV = self.factV*((mt.pi/2*self.factAng) - mt.cos((mt.pi/2*self.factAng))*mt.sin((mt.pi/2*self.factAng)))/((mt.pi/2*self.factAng)**2)
 
@@ -197,10 +198,9 @@ class kine:
         # print(angle)
         # Real volume calc: multiply theta-dependent part of 
         # volume by constant geometry-dependent factor
-        # self.volFactor = 0.85 + 0.15*mt.cos(angle)
-        self.volFactor = 1 - 0.1*(angle/(mt.pi/2))
+        # self.volFactor = 1 - 0.1*(angle/(mt.pi/2))
         volume = normV*self.factV
-        volComp = volume*self.volFactor
+        volComp = volume*self.volFactor + self.calFactor*self.maxV 
         # volComp = normComp*self.factV
 
         # angle = np.interp(volume, volLookup, theta)

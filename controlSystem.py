@@ -11,7 +11,7 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, listenStepPress, listenZero
+from arduinoInterface import connect, sendStep, listenZero, listenReply
 from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLog, ardSave
@@ -40,6 +40,7 @@ delayCount = 0
 delayLim = 100
 inLim1 = 0.32 # 32% of side length (17 mm contraction)
 inLim2 = 0.92 # 92% of side length (2 mm contraction)
+oscStep = 0.1
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
@@ -76,9 +77,9 @@ StepNoL, StepNoR, StepNoT = stepL, stepR, stepT
 try:
     [lhs, reply] = connect("LHS", 6)
     print(reply)
-    [rhs, reply] = connect("RHS", 4)
+    [rhs, reply] = connect("RHS", 5)
     print(reply)
-    [top, reply] = connect("TOP", 5)
+    [top, reply] = connect("TOP", 4)
     print(reply)
 except KeyboardInterrupt:
     lhs.close()
@@ -94,19 +95,19 @@ calibration = False
 # Calibration ON if TRUE below:
 while (calibration != True):
     try:
-        [realStepL, pressL, timeL] = listenZero(lhs, calibL)
-        # [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+        # [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+        [realStepR, pressR, timeR] = listenZero(rhs, calibR)
         # [realStepT, pressT, timeT] = listenZero(top, calibT)
-        print(realStepL, pressL)
-        # print(realStepR, pressR)
+        # print(realStepL, pressL)
+        print(realStepR, pressR)
         # print(realStepT, pressT)
-        if (realStepL == "0000LHS"):
-            calibL = True
-        # if (realStepR == "0000RHS"):
-        #     calibR = True
+        # if (realStepL == "0000LHS"):
+        #     calibL = True
+        if (realStepR == "0000RHS"):
+            calibR = True
         # if (realStepT == "0000TOP"):
         #     calibT = True
-        if (calibL * 1 * 1 == 1):
+        if (1 * calibR * 1 == 1):
             calibration = True
             # Send 0s instead of StepNo as signal that calibration done
             ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
@@ -116,7 +117,7 @@ while (calibration != True):
             ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
-    except Exception: # Find out what errors are expected and put them here
+    except KeyboardInterrupt: # Find out what errors are expected and put them here
         ardSave()
 
 ################################################################
@@ -126,21 +127,21 @@ while (calibration != True):
 mouseTrack.createTracker()
 try:
     while(flagStop == False):
-
         tick = time.perf_counter()
         [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
         tSecs = tMillis/1000
 
         # Do cable and syringe calculations:
         # Get target lengths and Jacobian from target point
-        
+
+        ##########################################
         # Manually set targets here
 
         # Discretise input:
         # targetY = 0
         # targetX = kine.sideLength*round(targetX/(kine.sideLength/10))/10
 
-        # Oscillate input between 10% and 90%
+        # Oscillate input between two values
         # Sampling frequency is ~20.8333 Hz, so use this to find speed.
         targetY = 0
         if targetXTest >= kine.sideLength*inLim2:
@@ -150,7 +151,7 @@ try:
             else:
                 toggleDirection = -1
                 delayCount = 0
-                targetXTest = targetXTest + toggleDirection*0.1
+                targetXTest = targetXTest + toggleDirection*oscStep
 
         elif targetXTest <= kine.sideLength*inLim1:
             targetXTest = kine.sideLength*inLim1
@@ -159,12 +160,14 @@ try:
             else:
                 toggleDirection = 1
                 delayCount = 0
-                targetXTest = targetXTest + toggleDirection*0.1
+                targetXTest = targetXTest + toggleDirection*oscStep
         else:
-            targetXTest = targetXTest + toggleDirection*0.1
+            targetXTest = targetXTest + toggleDirection*oscStep
         # Ensure 1 decimal place
-        targetXTest = round(10*targetXTest)/10 
+        targetXTest = round(100*targetXTest)/100 # Will only allow a step with 2 decimal places
         targetX = targetXTest
+        print(targetX)
+        #########################################
 
         # Limit input
         if targetX <= kine.sideLength*inLim1:
@@ -172,7 +175,8 @@ try:
         elif targetX >= kine.sideLength*inLim2:
             targetX = kine.sideLength*inLim2
         # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
-        print(targetX)
+            # Cable length restriction - percentage flat length
+
 
         [targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)
         # Get cable speeds using Jacobian at current point and calculation of input speed
@@ -183,7 +187,7 @@ try:
         [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, targetT)
         # CALCULATE FREQS FROM VALID STEP NUMBER
         # stepL is master position, cStepL is real, speed controlled position.
-        dStepL = stepL - cStepL 
+        dStepL = stepL - cStepL
         dStepR = stepR - cStepR
         dStepT = stepT - cStepT
         fStepL = dStepL*SAMP_FREQ
@@ -194,9 +198,9 @@ try:
         StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
         StepNoT += TStep
         # Send step number to arduinos:
-        [realStepL, pressL, timeL] = listenStepPress(lhs, StepNoL)
-        [realStepR, pressR, timeR] = listenStepPress(rhs, StepNoR)
-        [realStepT, pressT, timeT] = listenStepPress(top, StepNoT)
+        sendStep(lhs, StepNoL)
+        sendStep(rhs, StepNoR)
+        sendStep(top, StepNoT)
 
         # Update current position, cable lengths, and volumes as previous targets
         cJpinv = tJpinv
@@ -214,6 +218,10 @@ try:
         ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
             realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
             realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+
+        [realStepL, pressL, timeL] = listenReply(lhs)
+        [realStepR, pressR, timeR] = listenReply(rhs)
+        [realStepT, pressT, timeT] = listenReply(top)
         tock = time.perf_counter()
         elapsed = tock-tick
         # print(f"{elapsed:0.4f}")
@@ -231,9 +239,12 @@ except Exception:
 
 # Disable pumps and set them to idle state
 flagStop = mouseTrack.closeTracker()
-[realStepL, pressL, timeL] = listenStepPress(lhs, "Closed")
-[realStepR, pressR, timeR] = listenStepPress(rhs, "Closed")
-[realStepT, pressT, timeT] = listenStepPress(top, "Closed")
+sendStep(lhs, "Closed")
+sendStep(rhs, "Closed")
+sendStep(top, "Closed")
+[realStepL, pressL, timeL] = listenReply(lhs)
+[realStepR, pressR, timeR] = listenReply(rhs)
+[realStepT, pressT, timeT] = listenReply(top)
 print(realStepL, pressL, timeL)
 print(realStepR, pressR, timeR)
 print(realStepT, pressT, timeT)

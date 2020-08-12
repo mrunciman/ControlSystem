@@ -19,7 +19,9 @@ with open(fileName, mode ='w', newline='') as arduinoLog1:
 ardData = []
 
 
-def ardLog(lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsT, rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsT, topS, topLc, topA, topMaster, topP, topT):
+def ardLog(lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsT,\
+    rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsT,\
+    topS, topLc, topA, topMaster, topP, topT):
     """
     Save stepCount, master cable lengths, pressure values and time 
     from pumps in a list to later save in csv.
@@ -28,6 +30,7 @@ def ardLog(lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsT, rhsS, rhsLc, rhsA, rhsMaste
         + [rhsS] + [rhsLc] + [rhsA] + [rhsMaster] + [rhsP] + [rhsT]\
         + [topS] + [topLc] + [topA] + [topMaster] + [topP] + [topT])
     return
+
 
 def ardSave():
     """
