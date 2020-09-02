@@ -15,12 +15,15 @@ from arduinoInterface import connect, sendStep, listenZero, listenReply
 from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLog, ardSave
+from streaming import optiTracker
 import random
 
 # Initialise kinematics class:
 kine = kine()
 # Instantiate GUI class
 mouseTrack = mouseTracker()
+# Instantiate streamer class
+optiTrack = optiTracker()
 
 ############################################################
 # Initialise variables 
@@ -95,7 +98,7 @@ try:
     calibT = False
     calibration = False
     # Calibration ON if TRUE below:
-    while (calibration != True):
+    while (calibration != False):
         # [realStepL, pressL, timeL] = listenZero(lhs, calibL)
         [realStepR, pressR, timeR] = listenZero(rhs, calibR)
         # [realStepT, pressT, timeT] = listenZero(top, calibT)
@@ -196,7 +199,7 @@ try:
             targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
             targetX = targetXTest
             targetY = 0
-            print(targetX)
+            # print(targetX)
             #########################################
 
             # Limit input
@@ -232,6 +235,8 @@ try:
             sendStep(rhs, StepNoR)
             sendStep(top, StepNoT)
 
+            optiTrack.readSocket()
+            
             # Update current position, cable lengths, and volumes as previous targets
             cJpinv = tJpinv
             currentX = targetX
