@@ -92,33 +92,31 @@ def listenReply(ser):
 def listenZero(ser, pumpZero):
     x = "e"
     stepPress = b""
+    while ser.in_waiting == 0:
+        pass
+    # Check for end character
+    while ord(x) != ord("E"):
+        x = ser.read()
+        if x == b"":
+            break
+        elif x == b"E":
+            break
+        stepPress = stepPress + x
+
+    # ser.reset_input_buffer()
+    # ser.reset_output_buffer()
+    if stepPress == b"":
+        stepCount = "S_Empty" # Change this later to handle dropped values
+        pumpPress = "P_Empty"
+        pumpTime = "T_Empty"
+    else:
+        # print(stepPress)
+        stepPress = stepPress.decode('utf-8')
+        stepPress = stepPress.split(',')
+        stepCount = stepPress[0]
+        pumpPress = float(stepPress[1])/10
+        pumpTime = stepPress[2]
+
     if (pumpZero == True):
         stepCount = 0
-        pumpPress = "Low"
-        pumpTime = "Waiting..."
-    else:
-        while ser.in_waiting == 0:
-            pass
-        # Check for end character
-        while ord(x) != ord("E"):
-            x = ser.read()
-            if x == b"":
-                break
-            elif x == b"E":
-                break
-            stepPress = stepPress + x
-
-        # ser.reset_input_buffer()
-        # ser.reset_output_buffer()
-        if stepPress == b"":
-            stepCount = "S_Empty" # Change this later to handle dropped values
-            pumpPress = "P_Empty"
-            pumpTime = "T_Empty"
-        else:
-            # print(stepPress)
-            stepPress = stepPress.decode('utf-8')
-            stepPress = stepPress.split(',')
-            stepCount = stepPress[0]
-            pumpPress = float(stepPress[1])/10
-            pumpTime = stepPress[2]
     return stepCount, pumpPress, pumpTime

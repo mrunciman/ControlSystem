@@ -28,7 +28,7 @@ class mouseTracker(kine):
 
     def __init__(self):
         # Resolution in mm/pixel (Geomagic touch res ~0.055 mm)
-        self.resolution = 0.03
+        self.resolution = 0.025
         self.sideLength = kine.sideLength0
         self.canvasX = int(self.sideLength/self.resolution)
         self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
@@ -52,7 +52,7 @@ class mouseTracker(kine):
 
         # Give initial values for when class instance is made
         # Cast coordinates as floats for immutability, which allows tracking
-        self.xCoord = self.sideLength*0.92#float(self.centreX*self.resolution)#
+        self.xCoord = 2#float(self.centreX*self.resolution)#
         self.yCoord = 0.5#float(mt.tan(mt.pi/6)*self.centreX*self.resolution)#
         self.xPix = int(self.xCoord/self.resolution)#centreX#750#int(self.xCoord/resolution)#
         self.yPix = self.canvasY - int(self.yCoord/self.resolution)#centreY#canvasY-5#

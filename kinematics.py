@@ -8,7 +8,7 @@ import numpy as np
 from numpy import linalg as la
 import math as mt
 
-sideLength = 25
+sideLength = 19
 
 class kine:
     sideLength0 = sideLength
@@ -21,7 +21,7 @@ class kine:
         # Side length of equilateral triangle in mm
         self.sideLength = sideLength
         # 'Flat' muscle length:
-        self.L0 = self.sideLength/(1 - 2/mt.pi)
+        self.L0 = 25/(1 - 2/mt.pi)
         # Excess length of cable between entry point and muscle, in mm
         # self.Lx = 10
         # Total length of cable in flat/resting state
@@ -35,11 +35,12 @@ class kine:
         self.As = mt.pi*(13.25**2) # mm^2
         # Real volume calc: there are numLs beams of length L0/numLs
         self.factV = (self.muscleWidth*(self.L0)**2)/(2*self.numLs)
-        self.volFactor = 0.86 #12.6195/15.066 # Ratio of real volume to theoretical volume
-        self.calFactor = 0.06 # % of max vol still in actuator at calibration
+        self.volFactor = 0.9024 #12.6195/15.066 # Ratio of real volume to theoretical volume
+        self.calFactor = 0.01 # % of max vol still in actuator at calibration
         self.factAng = 1#75/90
         self.maxV = self.factV*((mt.pi/2*self.factAng) - mt.cos((mt.pi/2*self.factAng))*mt.sin((mt.pi/2*self.factAng)))/((mt.pi/2*self.factAng)**2)
-
+        # print(self.maxV)
+        
         # For step count:
         # Mapping from step to 1 revolution = 200 steps
         # 32 microsteps per step, so 6400 steps per revolution
