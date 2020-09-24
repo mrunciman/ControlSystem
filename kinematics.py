@@ -98,7 +98,7 @@ class kine:
         ###################################################################
         # Master Controller
         ###################################################################
-        self.speedLimit = 25 # mm/s
+        self.speedLimit = 4 # mm/s
         
 
     def cableLengths(self, x, y):

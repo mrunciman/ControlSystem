@@ -14,13 +14,13 @@ Set step frequency of individual pumps to alter speed
 from arduinoInterface import connect, sendStep, listenZero, listenReply
 from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
-from ardLogger import ardLog, ardSave
+from ardLogger import ardLogger
 import random
 
-# Initialise kinematics class:
+# Instantiate classes:
 kine = kine()
-# Instantiate GUI class
 mouseTrack = mouseTracker()
+ardLogging = ardLogger()
 
 ############################################################
 # Initialise variables 
@@ -47,6 +47,9 @@ leftLim = kine.sideLength - maxContract # 17 mm contraction wrt LHS vertex
 rightLim = kine.sideLength - minContract # 2 mm contraction wrt LHS vertex
 initialXFlag = False
 randoPosition = False
+# Count number of reps 
+halfCycles = 0
+noCycles = 30
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
@@ -96,26 +99,29 @@ try:
     calibration = False
     # Calibration ON if TRUE below:
     while (calibration != True):
-        # [realStepL, pressL, timeL] = listenZero(lhs, calibL)
-        [realStepR, pressR, timeR] = listenZero(rhs, calibR)
-        # [realStepT, pressT, timeT] = listenZero(top, calibT)
-        # print(realStepL, pressL)
+        if not(calibL):
+            [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+        if not(calibR):
+            [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+        # if not(calibT):
+            # [realStepT, pressT, timeT] = listenZero(top, calibT)
+        print(realStepL, pressL)
         print(realStepR, pressR)
         # print(realStepT, pressT)
-        # if (realStepL == "0000LHS"):
-        #     calibL = True
+        if (realStepL == "0000LHS"):
+            calibL = True
         if (realStepR == "0000RHS"):
             calibR = True
         # if (realStepT == "0000TOP"):
         #     calibT = True
-        if (1 * calibR * 1 == 1):
+        if (calibL * calibR * 1 == 1):
             calibration = True
             # Send 0s instead of StepNo as signal that calibration done
-            ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
+            ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
                 realStepR, LcRealR, angleR, 0, pressR, timeR,\
                 realStepT, LcRealT, angleT, 0, pressT, timeT)
         else:
-            ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
 
@@ -143,7 +149,6 @@ try:
 
             ###
             # Oscillate input between two values
-            # Sampling frequency is ~20.8333 Hz, so use this to find speed.
             # if targetXTest >= rightLim:
             #     targetXTest = rightLim
             #     if delayCount < delayLim:
@@ -151,6 +156,8 @@ try:
             #     else:
             #         toggleDirection = -1
             #         delayCount = 0
+            #         if not(halfCycles%2): #If even number of half cycles
+            #             halfCycles = halfCycles + 1
             #         targetXTest = targetXTest + toggleDirection*oscStep
 
             # elif targetXTest <= leftLim:
@@ -160,10 +167,14 @@ try:
             #     else:
             #         toggleDirection = 1
             #         delayCount = 0
+            #         # If desired cycles complete
+            #         if halfCycles == (noCycles*2 - 1):
+            #             break
+            #         if halfCycles%2: #If odd number of half cycles
+            #             halfCycles = halfCycles + 1
             #         targetXTest = targetXTest + toggleDirection*oscStep
             # else:
             #     targetXTest = targetXTest + toggleDirection*oscStep
-
             ###
 
             ###
@@ -182,7 +193,7 @@ try:
             ###
 
             ###
-            # Initially pause at midpoint
+            # Initially pause at point determined by GUI
             if initialXFlag == False:
                 targetXTest = mouseTrack.xCoord
                 if delayCount < delayLim:
@@ -195,17 +206,18 @@ try:
             # Ensure 1 decimal place
             targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
             targetX = targetXTest
-            targetY = 0
-            print(targetX)
-            #########################################
 
             # Limit input
-            if targetX <= 2:
-                targetX = 2
-            elif targetX >= 17:
-                targetX = 17
+            if targetX <= minContract:
+                targetX = minContract
+            elif targetX >=maxContract:
+                targetX = maxContract
             # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
-                # Cable length restriction - percentage flat length
+
+            targetY = 0
+            print(targetX, halfCycles)
+            #########################################
+
 
 
             [targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)
@@ -245,7 +257,7 @@ try:
             cStepL = StepNoL
             cStepR = StepNoR
             cStepT = StepNoT
-            ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
 
@@ -289,10 +301,10 @@ finally:
             print(realStepT, pressT, timeT)
     
             # Save values gathered from arduinos
-            ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
-            ardSave()
+            ardLogging.ardSave()
 
     except NameError:
         [lhs, reply] = connect("LHS", 6)

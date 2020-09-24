@@ -22,6 +22,11 @@ class optiTracker:
         print("M1: ", self.marker1, "M2: ", self.marker2, "M3: ", self.marker3)
         return self.marker1, self.marker2, self.marker3
 
+    def closeSocket(self):
+        self.trackSock.shutdown()
+        self.trackSock.close()
+
+
 # optiTrack = optiTracker()
 # optiTrack.readSocket()
 

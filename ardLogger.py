@@ -6,7 +6,7 @@ import csv
 # Append timestamp in ms to name
 location = "C:/Users/msrun/OneDrive - Imperial College London/Imperial/Fluidic Control/ControlSystem/logs/pumps"
 # logTime = time.time()
-logTime = time.strftime("%Y-%m-%d-_-%H-%M-%S")
+logTime = time.strftime("%Y-%m-%d %H-%M-%S")
 fileName = location + "/arduinoLogs " + logTime + ".csv" # USE THIS IN REAL TESTS
 # fileName = 'ardLogFile.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as arduinoLog1: 
@@ -16,27 +16,39 @@ with open(fileName, mode ='w', newline='') as arduinoLog1:
         'S_TOP', 'Lc_TOP','A_TOP', 'M_TOP', 'P_TOP', 'T_TOP',\
         time.time()])
 
-ardData = []
 
 
-def ardLog(lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsT,\
-    rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsT,\
-    topS, topLc, topA, topMaster, topP, topT):
-    """
-    Save stepCount, master cable lengths, pressure values and time 
-    from pumps in a list to later save in csv.
-    """
-    ardData.append([lhsS] + [lhsLc] + [lhsA] + [lhsMaster] + [lhsP] + [lhsT]\
-        + [rhsS] + [rhsLc] + [rhsA] + [rhsMaster] + [rhsP] + [rhsT]\
-        + [topS] + [topLc] + [topA] + [topMaster] + [topP] + [topT])
-    return
+class ardLogger():
+
+    def __init__(self):
+        self.ardData = []
+        self.numRows = 0
+
+    def ardLog(self,lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsT,\
+        rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsT,\
+        topS, topLc, topA, topMaster, topP, topT):
+        """
+        Save stepCount, master cable lengths, pressure values and time 
+        from pumps in a list to later save in csv.
+        """
+        args = locals() # Dictionary of input arguments
+        args.pop('self')
+        self.ardData.append([i for i in args.values()])
+        # print(self.ardData[self.numRows])
+        # self.numRows = self.numRows + 1
+
+        # ardData.append([lhsS] + [lhsLc] + [lhsA] + [lhsMaster] + [lhsP] + [lhsT]\
+        #     + [rhsS] + [rhsLc] + [rhsA] + [rhsMaster] + [rhsP] + [rhsT]\
+        #     + [topS] + [topLc] + [topA] + [topMaster] + [topP] + [topT])
+        return
 
 
-def ardSave():
-    """
-    Save ardLog list into csv file
-    """
-    with open(fileName, 'a', newline='') as arduinoLog2:
-        ardLog2 = csv.writer(arduinoLog2)
-        ardLog2.writerows(ardData)
-    return
+    def ardSave(self):
+        """
+        Save ardLog list into csv file
+        """
+        with open(fileName, 'a', newline='') as arduinoLog2:
+            ardLog2 = csv.writer(arduinoLog2)
+            for i in range(len(self.ardData)):
+                ardLog2.writerow(self.ardData[i])
+        return
