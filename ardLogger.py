@@ -1,13 +1,15 @@
 
 import time
 import csv
+import os
 
 # Create a file in 'log' directory and empty contents (if it already exists)
 # Append timestamp in ms to name
-location = "C:/Users/msrun/OneDrive - Imperial College London/Imperial/Fluidic Control/ControlSystem/logs/pumps"
-# logTime = time.time()
+# location = "Imperial College London/Imperial/Fluidic Control/ControlSystem/logs/pumps"
+location = os.path.dirname(__file__)
 logTime = time.strftime("%Y-%m-%d %H-%M-%S")
-fileName = location + "/arduinoLogs " + logTime + ".csv" # USE THIS IN REAL TESTS
+relative = "logs/pumps/arduinoLogs " + logTime + ".csv"
+fileName = os.path.join(location, relative) # USE THIS IN REAL TESTS
 # fileName = 'ardLogFile.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as arduinoLog1: 
     ardLog1 = csv.writer(arduinoLog1)

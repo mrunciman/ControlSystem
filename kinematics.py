@@ -57,6 +57,7 @@ class kine:
         self.maxSteps = self.stepsPV*self.maxV # number of steps needed to fill pouch
         # print(maxSteps)
         self.timeStep = 6/125 # Inverse of sampling frequency on arduinos
+        self.speedLimit = 4 # mm/s
 
 
         ###################################################################
@@ -95,10 +96,6 @@ class kine:
         # d/dt(sinc(t)) = (t*cos(t)-sin(t))/t**2
         # print(cableLookup)
 
-        ###################################################################
-        # Master Controller
-        ###################################################################
-        self.speedLimit = 4 # mm/s
         
 
     def cableLengths(self, x, y):
@@ -300,10 +297,10 @@ class kine:
     def cableSpeeds (self, cX, cY, tX, tY, JacoPlus, timeSecs):
         """
         Returns required cable length change rates to reach target
-        from current point within master sampling period.
+        from current point within primary sampling period.
         tX is target X, cX is current X.
         Desired speed in X and Y found by multiplying difference 
-        by sampling frequency of master. JacoPlus is pseudoinverse of
+        by sampling frequency of primary. JacoPlus is pseudoinverse of
         Jacobian at a given point.
         """
         timeSecs = self.timeStep

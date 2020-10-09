@@ -15,12 +15,14 @@ from arduinoInterface import connect, sendStep, listenZero, listenReply
 from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLogger
+from streaming import optiTracker
 import random
 
 # Instantiate classes:
 kine = kine()
 mouseTrack = mouseTracker()
 ardLogging = ardLogger()
+opTrack = optiTracker()
 
 ############################################################
 # Initialise variables 
@@ -83,12 +85,17 @@ StepNoL, StepNoR, StepNoT = stepL, stepR, stepT
 
 ###############################################################
 # Connect to Arduinos
+
+# Set COM port for each pump
+lhsCOM = 5
+rhsCOM = 4
+topCOM = 3
 try:
-    [lhs, reply] = connect("LHS", 6)
+    [lhs, reply] = connect("LHS", lhsCOM)
     print(reply)
-    [rhs, reply] = connect("RHS", 5)
+    [rhs, reply] = connect("RHS", rhsCOM)
     print(reply)
-    [top, reply] = connect("TOP", 4)
+    [top, reply] = connect("TOP", topCOM)
     print(reply)
 
     #############################################################
@@ -96,25 +103,25 @@ try:
     calibL = False
     calibR = False
     calibT = False
-    calibration = False
+    calibration = True
     # Calibration ON if TRUE below:
     while (calibration != True):
         if not(calibL):
             [realStepL, pressL, timeL] = listenZero(lhs, calibL)
         if not(calibR):
             [realStepR, pressR, timeR] = listenZero(rhs, calibR)
-        # if not(calibT):
-            # [realStepT, pressT, timeT] = listenZero(top, calibT)
+        if not(calibT):
+            [realStepT, pressT, timeT] = listenZero(top, calibT)
         print(realStepL, pressL)
         print(realStepR, pressR)
-        # print(realStepT, pressT)
+        print(realStepT, pressT)
         if (realStepL == "0000LHS"):
             calibL = True
         if (realStepR == "0000RHS"):
             calibR = True
-        # if (realStepT == "0000TOP"):
-        #     calibT = True
-        if (calibL * calibR * 1 == 1):
+        if (realStepT == "0000TOP"):
+            calibT = True
+        if (calibL * calibR * calibT == 1):
             calibration = True
             # Send 0s instead of StepNo as signal that calibration done
             ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
@@ -124,6 +131,7 @@ try:
             ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+
 
     ################################################################
     # Begin main loop
@@ -307,11 +315,11 @@ finally:
             ardLogging.ardSave()
 
     except NameError:
-        [lhs, reply] = connect("LHS", 6)
+        [lhs, reply] = connect("LHS", lhsCOM)
         print(reply)
-        [rhs, reply] = connect("RHS", 5)
+        [rhs, reply] = connect("RHS", rhsCOM)
         print(reply)
-        [top, reply] = connect("TOP", 4)
+        [top, reply] = connect("TOP", topCOM)
         print(reply)
 
     # Close serial connections

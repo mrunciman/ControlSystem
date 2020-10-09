@@ -5,15 +5,19 @@ import time
 import math as mt
 from kinematics import kine
 import matplotlib.path as mpltPath
+import os
 
 
 
 # Create a file in 'log' directory and empty contents (if it already exists)
 # Append timestamp in ms to name
-location = "C:/Users/msrun/OneDrive - Imperial College London/Imperial/Fluidic Control/ControlSystem/logs"
-# logTime = time.time()
+# location = "Imperial College London/Imperial/Fluidic Control/ControlSystem/logs"
+location = os.path.dirname(__file__)
 logTime = time.strftime("%Y-%m-%d-_-%H-%M-%S")
-fileName = location + "/positions " + logTime + ".csv" # USE THIS IN REAL TESTS
+relative = "logs/positions " + logTime + ".csv"
+fileName = os.path.join(location, relative) # USE THIS IN REAL TESTS
+print(fileName)
+# fileName = location + "/positions " + logTime + ".csv" 
 # fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog1: 
     logger1 = csv.writer(posLog1)
