@@ -156,52 +156,52 @@ try:
             ###
 
             ###
-            # Oscillate input between two values
-            # if targetXTest >= rightLim:
-            #     targetXTest = rightLim
-            #     if delayCount < delayLim:
-            #         delayCount += 1
-            #     else:
-            #         toggleDirection = -1
-            #         delayCount = 0
-            #         if not(halfCycles%2): #If even number of half cycles
-            #             halfCycles = halfCycles + 1
-            #         targetXTest = targetXTest + toggleDirection*oscStep
-
-            # elif targetXTest <= leftLim:
-            #     targetXTest = leftLim
-            #     if delayCount < delayLim:
-            #         delayCount += 1
-            #     else:
-            #         toggleDirection = 1
-            #         delayCount = 0
-            #         # If desired cycles complete
-            #         if halfCycles == (noCycles*2 - 1):
-            #             break
-            #         if halfCycles%2: #If odd number of half cycles
-            #             halfCycles = halfCycles + 1
-            #         targetXTest = targetXTest + toggleDirection*oscStep
-            # else:
-            #     targetXTest = targetXTest + toggleDirection*oscStep
-            ###
-
-            ###
-            # Set random target
-            if initialXFlag == True:
-                if randoPosition == False:
-                    targetXTest = random.uniform(leftLim, rightLim)
-                    randoPosition = True
+            ## Oscillate input between two values
+            if targetXTest >= rightLim:
+                targetXTest = rightLim
+                if delayCount < delayLim:
+                    delayCount += 1
                 else:
-                    targetXTest = currentX
-                    if delayCount < delayLim/2:
-                        delayCount += 1
-                    else:
-                        delayCount = 0
-                        randoPosition = False
+                    toggleDirection = -1
+                    delayCount = 0
+                    if not(halfCycles%2): #If even number of half cycles
+                        halfCycles = halfCycles + 1
+                    targetXTest = targetXTest + toggleDirection*oscStep
+
+            elif targetXTest <= leftLim:
+                targetXTest = leftLim
+                if delayCount < delayLim:
+                    delayCount += 1
+                else:
+                    toggleDirection = 1
+                    delayCount = 0
+                    # If desired cycles complete
+                    if halfCycles == (noCycles*2 - 1):
+                        break
+                    if halfCycles%2: #If odd number of half cycles
+                        halfCycles = halfCycles + 1
+                    targetXTest = targetXTest + toggleDirection*oscStep
+            else:
+                targetXTest = targetXTest + toggleDirection*oscStep
             ###
 
             ###
-            # Initially pause at point determined by GUI
+            ## Set random target
+            # if initialXFlag == True:
+            #     if randoPosition == False:
+            #         targetXTest = random.uniform(leftLim, rightLim)
+            #         randoPosition = True
+            #     else:
+            #         targetXTest = currentX
+            #         if delayCount < delayLim/2:
+            #             delayCount += 1
+            #         else:
+            #             delayCount = 0
+            #             randoPosition = False
+            ###
+
+            ###
+            ## Initially pause at point determined by GUI
             if initialXFlag == False:
                 targetXTest = mouseTrack.xCoord
                 if delayCount < delayLim:
@@ -211,7 +211,7 @@ try:
                     initialXFlag = True
             ###
 
-            # Ensure 1 decimal place
+            ## Ensure 1 decimal place
             targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
             targetX = targetXTest
 
@@ -236,7 +236,7 @@ try:
             [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, targetR)
             [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, targetT)
             # CALCULATE FREQS FROM VALID STEP NUMBER
-            # stepL is master position, cStepL is real, speed controlled position.
+            # stepL is master position, cStepL is real, current, speed controlled position.
             dStepL = stepL - cStepL
             dStepR = stepR - cStepR
             dStepT = stepT - cStepT
