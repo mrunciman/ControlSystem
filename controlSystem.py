@@ -16,7 +16,7 @@ from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLogger
 from streaming import optiTracker
-import random
+# import random
 
 # Instantiate classes:
 kine = kine()
@@ -103,9 +103,9 @@ try:
     calibL = False
     calibR = False
     calibT = False
-    calibration = True
+    calibration = False
     # Calibration ON if TRUE below:
-    while (calibration != True):
+    while (calibration != False):
         if not(calibL):
             [realStepL, pressL, timeL] = listenZero(lhs, calibL)
         if not(calibR):
@@ -157,32 +157,32 @@ try:
 
             ###
             ## Oscillate input between two values
-            if targetXTest >= rightLim:
-                targetXTest = rightLim
-                if delayCount < delayLim:
-                    delayCount += 1
-                else:
-                    toggleDirection = -1
-                    delayCount = 0
-                    if not(halfCycles%2): #If even number of half cycles
-                        halfCycles = halfCycles + 1
-                    targetXTest = targetXTest + toggleDirection*oscStep
+            # if targetXTest >= rightLim:
+            #     targetXTest = rightLim
+            #     if delayCount < delayLim:
+            #         delayCount += 1
+            #     else:
+            #         toggleDirection = -1
+            #         delayCount = 0
+            #         if not(halfCycles%2): #If even number of half cycles
+            #             halfCycles = halfCycles + 1
+            #         targetXTest = targetXTest + toggleDirection*oscStep
 
-            elif targetXTest <= leftLim:
-                targetXTest = leftLim
-                if delayCount < delayLim:
-                    delayCount += 1
-                else:
-                    toggleDirection = 1
-                    delayCount = 0
-                    # If desired cycles complete
-                    if halfCycles == (noCycles*2 - 1):
-                        break
-                    if halfCycles%2: #If odd number of half cycles
-                        halfCycles = halfCycles + 1
-                    targetXTest = targetXTest + toggleDirection*oscStep
-            else:
-                targetXTest = targetXTest + toggleDirection*oscStep
+            # elif targetXTest <= leftLim:
+            #     targetXTest = leftLim
+            #     if delayCount < delayLim:
+            #         delayCount += 1
+            #     else:
+            #         toggleDirection = 1
+            #         delayCount = 0
+            #         # If desired cycles complete
+            #         if halfCycles == (noCycles*2 - 1):
+            #             break
+            #         if halfCycles%2: #If odd number of half cycles
+            #             halfCycles = halfCycles + 1
+            #         targetXTest = targetXTest + toggleDirection*oscStep
+            # else:
+            #     targetXTest = targetXTest + toggleDirection*oscStep
             ###
 
             ###
@@ -202,28 +202,28 @@ try:
 
             ###
             ## Initially pause at point determined by GUI
-            if initialXFlag == False:
-                targetXTest = mouseTrack.xCoord
-                if delayCount < delayLim:
-                    delayCount += 1
-                else:
-                    delayCount = 0
-                    initialXFlag = True
+            # if initialXFlag == False:
+            #     targetXTest = mouseTrack.xCoord
+            #     if delayCount < delayLim:
+            #         delayCount += 1
+            #     else:
+            #         delayCount = 0
+            #         initialXFlag = True
             ###
 
             ## Ensure 1 decimal place
-            targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
-            targetX = targetXTest
+            # targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
+            # targetX = targetXTest
 
             # Limit input
-            if targetX <= minContract:
-                targetX = minContract
-            elif targetX >=maxContract:
-                targetX = maxContract
+            # if targetX <= minContract:
+            #     targetX = minContract
+            # elif targetX >=maxContract:
+            #     targetX = maxContract
             # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
 
-            targetY = 0
-            print(targetX, halfCycles)
+            # targetY = 0
+            # print(targetX, targetY)
             #########################################
 
 

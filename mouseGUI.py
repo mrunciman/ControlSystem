@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from numpy import linalg as la
 import csv
 import time
 import math as mt
@@ -16,7 +17,6 @@ location = os.path.dirname(__file__)
 logTime = time.strftime("%Y-%m-%d-_-%H-%M-%S")
 relative = "logs/positions " + logTime + ".csv"
 fileName = os.path.join(location, relative) # USE THIS IN REAL TESTS
-print(fileName)
 # fileName = location + "/positions " + logTime + ".csv" 
 # fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog1: 
@@ -37,7 +37,9 @@ class mouseTracker(kine):
         self.canvasX = int(self.sideLength/self.resolution)
         self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
         self.centreX = int(self.canvasX/2)
-        self.centreY = int(self.canvasY - 0.5774*(self.canvasX/2))
+        self.centreY = int(self.canvasY - mt.tan(mt.pi/6)*(self.canvasX/2))
+        self.radRestrictPix = 17/self.resolution #mm
+
         # Create background image
         self.bkGd = np.zeros(( self.canvasY+1, self.canvasX+1, 3), np.uint8)
         self.bkGd[:,:] = (255, 255, 255)
@@ -56,8 +58,8 @@ class mouseTracker(kine):
 
         # Give initial values for when class instance is made
         # Cast coordinates as floats for immutability, which allows tracking
-        self.xCoord = 9.5#float(self.centreX*self.resolution)#
-        self.yCoord = 0.5#float(mt.tan(mt.pi/6)*self.centreX*self.resolution)#
+        self.xCoord = float(self.centreX*self.resolution)#
+        self.yCoord = float((mt.tan(mt.pi/6))*(self.centreX*self.resolution))#
         self.xPix = int(self.xCoord/self.resolution)#centreX#750#int(self.xCoord/resolution)#
         self.yPix = self.canvasY - int(self.yCoord/self.resolution)#centreY#canvasY-5#
         self.mouseDown = False
@@ -95,7 +97,18 @@ class mouseTracker(kine):
         # If inside, move end effector and log.
         touching = neighPath.contains_point([x, y])
         # Check if point is inside triangle workspace
-        inside = self.path.contains_point([x, y])
+        insideTri = self.path.contains_point([x, y])
+        radDiff1 = np.array([[self.vt1[0]],[self.vt1[1]]])-np.array([[x], [y]])
+        radDiff2 = np.array([[self.vt2[0]],[self.vt2[1]]])-np.array([[x], [y]])
+        radDiff3 = np.array([[self.vt3[0]],[self.vt3[1]]])-np.array([[x], [y]])
+        proxVt1 = la.norm(radDiff1) < self.radRestrictPix
+        proxVt2 = la.norm(radDiff2) < self.radRestrictPix
+        proxVt3 = la.norm(radDiff3) < self.radRestrictPix
+        print(insideTri*proxVt1*proxVt2*proxVt3)
+        # 
+
+
+
         # Check if mouse button was pressed down (event 1)
         if event == 1:
             self.mouseDown = True
@@ -108,13 +121,13 @@ class mouseTracker(kine):
             self.touchDown = False
             # If released inside triangle and within
             # end effector handle, redraw cables red
-            if inside == True:
+            if insideTri == True:
                 if touching == True:
                     cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (x, y), (0, 0, 200), 1)
                     cv2.line(self.bkGd, (self.vt2[0], self.vt2[1]), (x, y), (0, 0, 200), 1)
                     cv2.line(self.bkGd, (self.vt3[0], self.vt3[1]), (x, y), (0, 0, 200), 1)
 
-        if inside == True:
+        if insideTri == True:
             if self.mouseDown == True:
                 if self.touchDown == True:
                     # Check if moving
@@ -149,6 +162,9 @@ class mouseTracker(kine):
         cv2.polylines(self.bkGd, [self.vts], True, (0, 0, 0), 1)
         # Initial position of end effector (25, 14.435)
         cv2.circle(self.bkGd, (self.xPix, self.yPix), self.radius, (0, 0, 0), -1)
+        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrictPix), (192,192,192), 1)
+        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrictPix), (192,192,192), 1)
+        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrictPix), (192,192,192), 1)
         cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (self.xPix, self.yPix), (0, 128, 0), 1)
         cv2.line(self.bkGd, (self.vt2[0], self.vt2[1]), (self.xPix, self.yPix), (0, 128, 0), 1)
         cv2.line(self.bkGd, (self.vt3[0], self.vt3[1]), (self.xPix, self.yPix), (0, 128, 0), 1)

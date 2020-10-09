@@ -8,7 +8,7 @@ import numpy as np
 from numpy import linalg as la
 import math as mt
 
-sideLength = 19
+sideLength = 18.911
 
 class kine:
     sideLength0 = sideLength
@@ -58,7 +58,6 @@ class kine:
         # print(maxSteps)
         self.timeStep = 6/125 # Inverse of sampling frequency on arduinos
         self.speedLimit = 4 # mm/s
-
 
         ###################################################################
         # Pulse generation
