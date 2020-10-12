@@ -57,7 +57,7 @@ class kine:
         self.maxSteps = self.stepsPV*self.maxV # number of steps needed to fill pouch
         # print(maxSteps)
         self.timeStep = 6/125 # Inverse of sampling frequency on arduinos
-        self.speedLimit = 4 # mm/s
+        self.cableSpeedLim = 4 # mm/s
 
         ###################################################################
         # Pulse generation
@@ -95,9 +95,30 @@ class kine:
         # d/dt(sinc(t)) = (t*cos(t)-sin(t))/t**2
         # print(cableLookup)
 
+        ###################################################################
+        # End Effector and Entry Point Geometry
+        ###################################################################
+        # a (alpha) is yaw angle wrt global frame
+        self.a = 0
+        # Rotation matrix of instrument wrt global frame, assuming no pitch or roll
+        # For transformation from base orientation to conventional instrument frame, add further rotation
+        # This is an input
+        self.RotGI = np.array([[mt.cos(self.a), -mt.sin(self.a), 0], [mt.sin(self.a), mt.cos(self.a), 0], [0, 0, 1]])
+
+        # r (radius) is radius of end effector
+        self.r = 0 # millimetres, possible because of rotating end effector
+        # This matrix defines the three instrument attachment points wrt instrument frame
+        self.attP = np.array([[self.r, -self.r, 0], [-self.r, self.r, 0], [0, self.r, 0]])
+        # Z axis out of screen - conssitent with 'master' controller
+
+        # Entry point array - global frame defined at bottom lhs corner (from behind instrument)
+        # LHS, RHS, TOP corner coordinates, corners of equilateral of side S
+        self.E = np.array([[0, 0, 0], [self.sideLength, 0, 0], [0.5*self.sideLength, self.sideLength*mt.sin(mt.pi/3), 0]])
+        self.E = np.transpose(self.E)
+
         
 
-    def cableLengths(self, x, y):
+    def cableLengths(self, cX, cY, tX, tY):
         """
         Function finds cable lengths in mm from entry points to end effector
         given an input point (x, y) in mm.
@@ -106,73 +127,55 @@ class kine:
         structure matrix.
         e.g. [cableL, cableR, cableT, Jplus] = cableLengths(15, 8.6603)
         """
-        # x and y define the desired point on the plane in mm.
-        # x = x/1000
-        # y = y/1000
-
-        # a (alpha) is yaw angle wrt global frame
-        a = 0
-        # Rotation matrix of instrument wrt global frame, assuming no pitch or roll
-        # For transformation from base orientation to conventional instrument frame, add further rotation
-        # This is an input
-        RotGI = np.array([[mt.cos(a), -mt.sin(a), 0], [mt.sin(a), mt.cos(a), 0], [0, 0, 1]])
-
-        # r (radius) is radius of end effector
-        r = 0 # millimetre
-        # This matrix defines the three instrument attachment points wrt instrument frame
-        attP = np.array([[r, -r, 0], [-r, r, 0], [0, r, 0]]) #Not actually how it will look, just for test
-        # Z axis out of screen - conssitent with 'master' controller
-
-        # P is the desired position on plane
-        P = np.array([[x], [y], [0]])
+        # cP is the current position on plane
+        cP = np.array([[cX], [cY], [0]])
+        tP = np.array([[tX], [tY], [0]])
 
         # Find cable attachment points in global frame
-        PGI = np.dot(RotGI, attP) + P
-        # print(PGI)
+        cPGI = np.dot(self.RotGI, self.attP) + cP
+        tPGI = np.dot(self.RotGI, self.attP) + tP
+        # print(cPGI)
         
-        # Entry point array - global frame defined at bottom lhs corner (from behind instrument)
-        # LHS, RHS, TOP corner coordinates, corners of equilateral of side S
-        E = np.array([[0, 0, 0], [self.sideLength, 0, 0], [0.5*self.sideLength, self.sideLength*mt.sin(mt.pi/3), 0]])
-        E = np.transpose(E)
         # Result is 3x3 matrix of vectors in global frame pointing from attachment points to
         # entry points, norms of columns are cable lengths
-        L = E - PGI
-        lhsCable = la.norm(L[:,0])
-        rhsCable = la.norm(L[:,1])
-        topCable = la.norm(L[:,2])
-        # print(L)
+        cL = self.E - cPGI
+        tL = self.E - tPGI
+        # Current cable lengths for current Jaco calculation
+        cLhsCable = la.norm(cL[:,0])
+        cRhsCable = la.norm(cL[:,1])
+        cTopCable = la.norm(cL[:,2])
+        # Target cable lengths calulation
+        tLhsCable = la.norm(tL[:,0])
+        tRhsCable = la.norm(tL[:,1])
+        tTopCable = la.norm(tL[:,2])
+        # print(cL)
 
         # Compute the structure matrix A from cable unit vectors and cable attachment points 
-        # in global frame, PGI
+        # in global frame, cPGI
         # Find cable unit vectors
-        u1 = L[:,0]/lhsCable    ### FILTER OUT ZERO LENGTH ERRORS
-        u2 = L[:,1]/rhsCable
-        u3 = L[:,2]/topCable
+        u1 = cL[:,0]/cLhsCable    ### FILTER OUT ZERO LENGTH ERRORS
+        u2 = cL[:,1]/cRhsCable
+        u3 = cL[:,2]/cTopCable
         u = np.array([u1, u2, u3])
         u = np.transpose(u)
         # print(u)
         # Find cross products of cable unit vectors and attachment points
-        pCrossU1 = np.cross(PGI[:,0], u1)
-        pCrossU2 = np.cross(PGI[:,1], u2)
-        pCrossU3 = np.cross(PGI[:,2], u3)
+        pCrossU1 = np.cross(cPGI[:,0], u1)
+        pCrossU2 = np.cross(cPGI[:,1], u2)
+        pCrossU3 = np.cross(cPGI[:,2], u3)
         pCrossU = np.array([pCrossU1, pCrossU2, pCrossU3])
         pCrossU = np.transpose(pCrossU)
         # print(pCrossU)
 
         # Construct Jacobian from transpose of structure matrix
-        Jacobian = np.concatenate((u, pCrossU), axis = 0)
-        # print("Jacobian matrix is \n", Jacobian)
+        cJacobian = np.concatenate((u, pCrossU), axis = 0)
         # Use only top two rows
-        Jplus = np.linalg.pinv(Jacobian[0:2,:])
-        # print(Jplus)
-        # speeds = np.array([0,10*0.5774,3,4,5,6])
-        # speeds = np.transpose(speeds)
-        # print(np.dot(Jplus, speeds[0:2]))
-        
+        Jplus = np.linalg.pinv(cJacobian[0:2,:])
+        # print(cJacobian[0:2,:])
         # rank(A) # Check for singular configuration
         # If rank(A) < no controlled DOFs, A is singular
 
-        return lhsCable, rhsCable, topCable, Jplus
+        return tLhsCable, tRhsCable, tTopCable, cJacobian, Jplus
 
 
 
@@ -224,7 +227,7 @@ class kine:
 
 
     ###### MAKE THIS FUNCTION ACCPET CURRENT VOLUME, SO CALC ISN'T REPEATED
-    def volRate(self, cV, cCable, tCable):
+    def volRate(self, cVol, cCable, tCable):
         """
         Makes linear approximation of volume rate.
         Returns volume rate in mm^3/s, syringe speed in mm/s, pulse frequency 
@@ -233,9 +236,9 @@ class kine:
         # USE CABLE SPEED AND INITIAL CABLE LENGTH AS INPUT?
         # Find current and target volume and displacement of syringe
         # [cV, cD] = length2Vol(cCable)
-        [tV, tSpeed, stepNo, LcDisc, angleDisc] = self.length2Vol(cCable, tCable)
+        [tVol, tSpeed, stepNo, LcDisc, angleDisc] = self.length2Vol(cCable, tCable)
         # Calculate linear approximation of volume rate:
-        volDiff = tV-cV
+        volDiff = tVol-cVol
         vDot = (volDiff)/self.timeStep #timeSecs  # mm^3/s
         dDot = (vDot/self.As) # mm/s
 
@@ -247,7 +250,7 @@ class kine:
         # For speed: pulses/mm * mm/s = pulses/s
         fStep = self.stepsPMM*dDot
 
-        return tV, vDot, dDot, fStep, stepNo, tSpeed, LcDisc, angleDisc
+        return tVol, vDot, dDot, fStep, stepNo, tSpeed, LcDisc, angleDisc
 
 
 
@@ -293,7 +296,7 @@ class kine:
 
 
 
-    def cableSpeeds (self, cX, cY, tX, tY, JacoPlus, timeSecs):
+    def cableSpeeds (self, cX, cY, tX, tY, Jaco, JacoPlus, timeSecs):
         """
         Returns required cable length change rates to reach target
         from current point within primary sampling period.
@@ -312,29 +315,43 @@ class kine:
         tVx =  diffX/timeSecs
         diffY = tY - cY
         tVy = diffY/timeSecs
-        vMag = mt.sqrt(tVx**2 + tVy**2)
-        # Check if point can be reached without exceeding speed limit.
-        # Scale back velocity to speed limit and calculate actual position.
-
-        if vMag > self.speedLimit:
-            # Calculate unit velocity vector and multiply by 
-            # limit to scale down
-            tVx = (tVx/vMag)*self.speedLimit
-            tVy = (tVy/vMag)*self.speedLimit
-            # Find actual position after movement
-            # actX = cX + (diffX*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
-            # actY = cY + (diffY*speedLimit/mt.sqrt(diffX**2 + diffY**2))*timeSecs
-            # print(actX, actY)
-
-        v = np.array([[tVx],[tVy]])
+        vInput = np.array([[tVx],[tVy]])
 
         # IK premultiplying input end effector velocity vector with pseudoinverse J
         # to yield joint velocities.
-        cableRates = np.dot(JacoPlus, v)
-        # velocity = np.dot(J, cableRates)
-        # print(velocity)
-        lhsSpeed = cableRates[0] # These are all array type still
+        cableRates = np.dot(JacoPlus, vInput)
+        absRates = np.absolute(cableRates)
+        vSign = np.sign(cableRates)
+        vMax = np.amax(absRates)
+        # If any cable speed is non-zero
+        if np.any(cableRates):
+            if vMax > self.cableSpeedLim:
+                vFact = self.cableSpeedLim/vMax
+                vScaled = vFact*absRates
+                vScaled = vScaled*vSign
+                cableRates = vScaled
+        # Resultant cable speeds 
+        lhsSpeed = cableRates[0]
         rhsSpeed = cableRates[1]
         topSpeed = cableRates[2]
-        # print(v[0], lhsSpeed)
-        return lhsSpeed, rhsSpeed, topSpeed
+        # print(cableRates)
+
+        # Find scaled velocity in Euclidean space by pre-multiplying joint velocities with J:
+        vEuclid = np.dot(Jaco,cableRates)
+        vEuclidXY = vEuclid[0:2]
+        tVx = vEuclidXY[0]
+        tVy = vEuclidXY[1]
+        vMagScaled = mt.sqrt(tVx**2 + tVy**2)
+        # print(vEuclidXY)
+
+        # Find actual position after scaled movement:
+        if np.any(vEuclidXY): # If tVx or tVy is non-zero
+            actX = cX + ((diffX*vMagScaled)/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+            actY = cY + ((diffY*vMagScaled)/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+        else:
+            actX = cX
+            actY = cY
+        # print(actX, actY)
+        
+
+        return lhsSpeed, rhsSpeed, topSpeed, actX, actY

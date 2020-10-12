@@ -12,10 +12,11 @@ Set step frequency of individual pumps to alter speed
 """
 
 from arduinoInterface import connect, sendStep, listenZero, listenReply
-from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
+from kinematics import kine
 from mouseGUI import mouseTracker
 from ardLogger import ardLogger
 from streaming import optiTracker
+import math
 # import random
 
 # Instantiate classes:
@@ -30,10 +31,10 @@ SAMP_FREQ = 1/kine.timeStep
 
 flagStop = False
 
-currentX = 0
-currentY = 0
 # Target must be cast as immutable type (float, in this case) so that 
 # the current position doesn't update at same time as target
+currentX = 0.0001*math.cos(math.pi/6)#mouseTrack.xCoord
+currentY = 0.0001*math.sin(math.pi/6)#mouseTrack.yCoord
 targetX = mouseTrack.xCoord
 targetXTest = targetX
 targetY = mouseTrack.yCoord
@@ -56,7 +57,9 @@ noCycles = 30
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
 cableL, cableR, cableT = kine.sideLength, kine.sideLength, kine.sideLength
-[targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)
+[targetL, targetR, targetT, cJaco, cJpinv] = kine.cableLengths(currentX, currentY, targetX, targetY)
+repJaco = cJaco
+repJpinv = cJpinv
 realStepL, realStepR, realStepT = 0, 0, 0
 angleL, angleR, angleT = 0, 0, 0
 
@@ -226,17 +229,18 @@ try:
             # print(targetX, targetY)
             #########################################
 
-
-
-            [targetL, targetR, targetT, tJpinv] = kine.cableLengths(targetX, targetY)
+            # Return target cable lengths at target coords and jacobian at current coords
+            [targetL, targetR, targetT, cJaco, cJpinv] = kine.cableLengths(currentX, currentY, targetX, targetY)
             # Get cable speeds using Jacobian at current point and calculation of input speed
-            # [lhsV, rhsV, topV] = cableSpeeds(currentX, currentY, targetX, targetY, cJpinv, tSecs)
+            [lhsV, rhsV, topV, actualX, actualY] = kine.cableSpeeds(currentX, currentY, targetX, targetY, cJaco, cJpinv, tSecs)
+            # Find actual target cable lengths based on scaled cable speeds that result in 'actual' coords
+            [scaleTargL, scaleTargR, scaleTargT, repJaco, repJpinv] = kine.cableLengths(currentX, currentY, actualX, actualY)
             # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
-            [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, targetL)
-            [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, targetR)
-            [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, targetT)
+            [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, scaleTargL)
+            [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, scaleTargR)
+            [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, scaleTargT)
             # CALCULATE FREQS FROM VALID STEP NUMBER
-            # stepL is master position, cStepL is real, current, speed controlled position.
+            # stepL is master position, cStepL is current, speed controlled position.
             dStepL = stepL - cStepL
             dStepR = stepR - cStepR
             dStepT = stepT - cStepT
@@ -253,12 +257,12 @@ try:
             sendStep(top, StepNoT)
 
             # Update current position, cable lengths, and volumes as previous targets
-            cJpinv = tJpinv
-            currentX = targetX
-            currentY = targetY
-            cableL = targetL
-            cableR = targetR
-            cableT = targetT
+            # cJpinv = tJpinv
+            currentX = actualX # Set to actualX and Y?
+            currentY = actualY
+            cableL = scaleTargL
+            cableR = scaleTargR
+            cableT = scaleTargT
             cVolL = tVolL
             cVolR = tVolR
             cVolT = tVolT
