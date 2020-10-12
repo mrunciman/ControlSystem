@@ -38,7 +38,8 @@ class mouseTracker(kine):
         self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
         self.centreX = int(self.canvasX/2)
         self.centreY = int(self.canvasY - mt.tan(mt.pi/6)*(self.canvasX/2))
-        self.radRestrictPix = 17/self.resolution #mm
+        self.radRestrictPix = 16.5/self.resolution #mm
+        self.mouseEvent = 0
 
         # Create background image
         self.bkGd = np.zeros(( self.canvasY+1, self.canvasX+1, 3), np.uint8)
@@ -82,6 +83,7 @@ class mouseTracker(kine):
         numMillis = numMillis*1000
         self.timeDiff = numMillis - self.prevMillis
         self.prevMillis = numMillis
+        self.mouseEvent = event
 
         # Draw a 5pixel side square around current point
         p1 = [self.xPix-self.num, self.yPix-self.num]
@@ -104,10 +106,8 @@ class mouseTracker(kine):
         proxVt1 = la.norm(radDiff1) < self.radRestrictPix
         proxVt2 = la.norm(radDiff2) < self.radRestrictPix
         proxVt3 = la.norm(radDiff3) < self.radRestrictPix
-        print(insideTri*proxVt1*proxVt2*proxVt3)
-        # 
-
-
+        insideAll = insideTri*proxVt1*proxVt2*proxVt3
+        # print(insideAll)
 
         # Check if mouse button was pressed down (event 1)
         if event == 1:
@@ -120,14 +120,14 @@ class mouseTracker(kine):
             self.mouseDown = False
             self.touchDown = False
             # If released inside triangle and within
-            # end effector handle, redraw cables red
-            if insideTri == True:
+            # end effector handle, redraw cables blue
+            if insideAll == True:
                 if touching == True:
-                    cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (x, y), (0, 0, 200), 1)
-                    cv2.line(self.bkGd, (self.vt2[0], self.vt2[1]), (x, y), (0, 0, 200), 1)
-                    cv2.line(self.bkGd, (self.vt3[0], self.vt3[1]), (x, y), (0, 0, 200), 1)
+                    cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (x, y), (0, 192, 0), 1)
+                    cv2.line(self.bkGd, (self.vt2[0], self.vt2[1]), (x, y), (0, 192, 0), 1)
+                    cv2.line(self.bkGd, (self.vt3[0], self.vt3[1]), (x, y), (0, 192, 0), 1)
 
-        if insideTri == True:
+        if insideAll == True:
             if self.mouseDown == True:
                 if self.touchDown == True:
                     # Check if moving
@@ -137,6 +137,10 @@ class mouseTracker(kine):
                         self.bkGd[:,:] = (255, 255, 255)
                         cv2.circle(self.bkGd, (x, y), self.radius, (0, 0, 0), -1)
                         cv2.polylines(self.bkGd, [self.vts], True, (0, 0, 0), 1)
+                        cv2.circle(self.bkGd, (self.xPix, self.yPix), self.radius, (0, 0, 0), -1)
+                        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrictPix), (192,192,192), 1)
+                        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrictPix), (192,192,192), 1)
+                        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrictPix), (192,192,192), 1)
                         cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (x, y), (0, 128, 0), 1)
                         cv2.line(self.bkGd, (self.vt2[0], self.vt2[1]), (x, y), (0, 128, 0), 1)
                         cv2.line(self.bkGd, (self.vt3[0], self.vt3[1]), (x, y), (0, 128, 0), 1)
@@ -173,19 +177,34 @@ class mouseTracker(kine):
         # Bind drawCables mouse callback function to window
         cv2.setMouseCallback(self.windowName, self.drawCables)
 
-    def iterateTracker(self):
+    def iterateTracker(self, LHSPress, RHSPress, TOPPress):
         # Bind drawCables mouse callback function to window
         cv2.setMouseCallback(self.windowName, self.drawCables)
-        posText = "({:.2f}, {:.2f})".format(self.xCoord, self.yCoord)
-        placement = (self.xPix-60, self.yPix-15)
-        cv2.putText(self.bkGd, posText, placement, font, fontscale, colour, thick, cv2.LINE_AA)
+        # Display pressures:
+        P_LHS_Text = "LHS Pressure / mbar = {:.2f}".format(LHSPress)
+        P_RHS_Text = "RHS Pressure / mbar = {:.2f}".format(RHSPress)
+        P_TOP_Text = "TOP Pressure / mbar = {:.2f}".format(TOPPress)
+        pPlaceLHS = (15, 25)
+        pPlaceRHS = (15,45)
+        pPlaceTOP = (15,65)
+        pressPlEnd = (int(self.canvasX*0.4), int(self.canvasY/6))
+        cv2.rectangle(self.bkGd, (0,0), pressPlEnd, (255,255,255), -1)
+        cv2.putText(self.bkGd, P_LHS_Text, pPlaceLHS, font, fontscale, colour, thick, cv2.LINE_AA)
+        cv2.putText(self.bkGd, P_RHS_Text, pPlaceRHS, font, fontscale, colour, thick, cv2.LINE_AA)
+        cv2.putText(self.bkGd, P_TOP_Text, pPlaceTOP, font, fontscale, colour, thick, cv2.LINE_AA)
+        # Redraw position text
+        if self.mouseEvent ==0:
+            posText = "({:.2f}, {:.2f})".format(self.xCoord, self.yCoord)
+            placeEE = (self.xPix-60, self.yPix-15)
+            placeEERec = (self.xPix-60, self.yPix-30) 
+            placeEEEnd = (self.xPix+60, self.yPix-12)
+            cv2.rectangle(self.bkGd, placeEERec, placeEEEnd, (255,255,255), -1)
+            cv2.putText(self.bkGd, posText, placeEE, font, fontscale, colour, thick, cv2.LINE_AA)
+        # Display image
         cv2.imshow(self.windowName, self.bkGd)
+        # Close on Esc key
         if cv2.waitKey(20) & 0xFF == 27:
             self.stopFlag = True
-            # cv2.destroyAllWindows()
-            # with open(fileName, 'a', newline='') as posLog:
-            #     logger = csv.writer(posLog)
-            #     logger.writerows(self.logData)
         return self.xCoord, self.yCoord, self.timeDiff, self.stopFlag
 
     def closeTracker(self):

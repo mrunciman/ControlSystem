@@ -140,7 +140,7 @@ try:
         mouseTrack.createTracker()
         while(flagStop == False):
             # tick = time.perf_counter()
-            [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker()
+            [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT)
             tSecs = tMillis/1000
 
             # Do cable and syringe calculations:
