@@ -11,7 +11,7 @@ Calculate speed of each pump piston
 Set step frequency of individual pumps to alter speed
 """
 
-from arduinoInterface import connect, sendStep, listenZero, listenReply
+from arduinoInterface import ardInterfacer
 from kinematics import kine #cableLengths, volRate, freqScale, length2Vol
 from mouseGUI import mouseTracker
 from ardLogger import ardLogger
@@ -90,12 +90,16 @@ StepNoL, StepNoR, StepNoT = stepL, stepR, stepT
 lhsCOM = 5
 rhsCOM = 4
 topCOM = 3
+
 try:
-    [lhs, reply] = connect("LHS", lhsCOM)
+    ardIntLHS = ardInterfacer("LHS", lhsCOM)
+    reply = ardIntLHS.connect()
     print(reply)
-    [rhs, reply] = connect("RHS", rhsCOM)
+    ardIntRHS = ardInterfacer("RHS", rhsCOM)
+    reply = ardIntRHS.connect()
     print(reply)
-    [top, reply] = connect("TOP", topCOM)
+    ardIntTOP = ardInterfacer("TOP", topCOM)
+    reply = ardIntTOP.connect()
     print(reply)
 
     #############################################################
@@ -107,11 +111,11 @@ try:
     # Calibration ON if TRUE below:
     while (calibration != True):
         if not(calibL):
-            [realStepL, pressL, timeL] = listenZero(lhs, calibL)
+            [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL)
         if not(calibR):
-            [realStepR, pressR, timeR] = listenZero(rhs, calibR)
+            [realStepR, pressR, timeR] = ardIntRHS.listenZero(calibR)
         if not(calibT):
-            [realStepT, pressT, timeT] = listenZero(top, calibT)
+            [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT)
         print(realStepL, pressL)
         print(realStepR, pressR)
         print(realStepT, pressT)
@@ -248,9 +252,9 @@ try:
             StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
             StepNoT += TStep
             # Send step number to arduinos:
-            sendStep(lhs, StepNoL)
-            sendStep(rhs, StepNoR)
-            sendStep(top, StepNoT)
+            ardIntLHS.sendStep(StepNoL)
+            ardIntRHS.sendStep(StepNoR)
+            ardIntTOP.sendStep(StepNoT)
 
             # Update current position, cable lengths, and volumes as previous targets
             cJpinv = tJpinv
@@ -269,9 +273,9 @@ try:
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
 
-            [realStepL, pressL, timeL] = listenReply(lhs)
-            [realStepR, pressR, timeR] = listenReply(rhs)
-            [realStepT, pressT, timeT] = listenReply(top)
+            [realStepL, pressL, timeL] = ardIntLHS.listenReply()
+            [realStepR, pressR, timeR] = ardIntRHS.listenReply()
+            [realStepT, pressT, timeT] = ardIntTOP.listenReply()
             # tock = time.perf_counter()
             # elapsed = tock-tick
             # print(f"{elapsed:0.4f}")
@@ -293,19 +297,19 @@ finally:
     # Stop program
     # Disable pumps and set them to idle state
     try:
-        if lhs.is_open:
+        if ardIntLHS.ser.is_open:
             sendStep(lhs, "Closed")
-            [realStepL, pressL, timeL] = listenReply(lhs)
+            [realStepL, pressL, timeL] = ardIntLHS.listenReply()
             print(realStepL, pressL, timeL)
 
-        if rhs.is_open:
+        if ardIntRHS.ser.is_open:
             sendStep(rhs, "Closed")
-            [realStepR, pressR, timeR] = listenReply(rhs)
+            [realStepR, pressR, timeR] = ardIntRHS.listenReply()
             print(realStepR, pressR, timeR)
         
-        if top.is_open:
+        if ardIntTOP.ser.is_open:
             sendStep(top, "Closed")
-            [realStepT, pressT, timeT] = listenReply(top)
+            [realStepT, pressT, timeT] = ardIntTOP.listenReply()
             print(realStepT, pressT, timeT)
     
             # Save values gathered from arduinos
@@ -315,15 +319,14 @@ finally:
             ardLogging.ardSave()
 
     except NameError:
-        [lhs, reply] = connect("LHS", lhsCOM)
+        reply = ardIntLHS.connect()
         print(reply)
-        [rhs, reply] = connect("RHS", rhsCOM)
+        reply = ardIntRHS.connect()
         print(reply)
-        [top, reply] = connect("TOP", topCOM)
+        reply = ardIntTOP.connect()
         print(reply)
 
     # Close serial connections
-    lhs.close()
-    rhs.close()
-    top.close()
-
+    ardIntLHS.ser.close()
+    ardIntRHS.ser.close()
+    ardIntTOP.ser.close()
