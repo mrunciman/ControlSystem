@@ -64,27 +64,28 @@ realStepL, realStepR, realStepT = 0, 0, 0
 angleL, angleR, angleT = 0, 0, 0
 
 # Set current volume (ignore tSpeed and step values) 
-[cVolL, tSpeedL, stepL, LcRealL, angleL] = kine.length2Vol(cableL, targetL)
-[cVolR, tSpeedR, stepR, LcRealR, angleR] = kine.length2Vol(cableR, targetR)
-[cVolT, tSpeedT, stepT, LcRealT, angleT] = kine.length2Vol(cableT, targetT)
+[cVolL, tSpeedL, tStepL, LcRealL, angleL] = kine.length2Vol(cableL, targetL)
+[cVolR, tSpeedR, tStepR, LcRealR, angleR] = kine.length2Vol(cableR, targetR)
+[cVolT, tSpeedT, tStepT, LcRealT, angleT] = kine.length2Vol(cableT, targetT)
 
-[tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, targetL)
-[tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, targetR)
-[tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, targetT)
-[OCRL, OCRR, OCRT, LStep, RStep, TStep] = kine.freqScale(fStepL, fStepR, fStepT)
+[tVolL, vDotL, dDotL, fStepL, tStepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, targetL)
+[tVolR, vDotR, dDotR, fStepR, tStepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, targetR)
+[tVolT, vDotT, dDotT, fStepT, tStepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, targetT)
+[LStep, RStep, TStep] = kine.freqScale(fStepL, fStepR, fStepT)
 LStep, RStep, TStep = 0, 0, 0
 
 # Set initial pressure and calibration variables
 pressL, pressR, pressT = 0, 0, 0
+cTimeL, cTimeR, cTimeT = 0, 0, 0
 timeL, timeR, timeT = 0, 0, 0
 
 # Current position
-cStepL = stepL
-cStepR = stepR
-cStepT = stepT
+cStepL = tStepL
+cStepR = tStepR
+cStepT = tStepT
 dStepL, dStepR, dStepT  = 0, 0, 0
 
-StepNoL, StepNoR, StepNoT = stepL, stepR, stepT
+StepNoL, StepNoR, StepNoT = tStepL, tStepR, tStepT
 
 ###############################################################
 # Connect to Arduinos
@@ -142,7 +143,6 @@ try:
         # Bring up GUI
         mouseTrack.createTracker()
         while(flagStop == False):
-            # tick = time.perf_counter()
             [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT)
             tSecs = tMillis/1000
 
@@ -156,36 +156,6 @@ try:
             # Discretise input:
             # targetY = 0
             # targetX = kine.sideLength*round(targetX/(kine.sideLength/10))/10
-            ###
-
-            ###
-            ## Oscillate input between two values
-            # if targetXTest >= rightLim:
-            #     targetXTest = rightLim
-            #     if delayCount < delayLim:
-            #         delayCount += 1
-            #     else:
-            #         toggleDirection = -1
-            #         delayCount = 0
-            #         if not(halfCycles%2): #If even number of half cycles
-            #             halfCycles = halfCycles + 1
-            #         targetXTest = targetXTest + toggleDirection*oscStep
-
-            # elif targetXTest <= leftLim:
-            #     targetXTest = leftLim
-            #     if delayCount < delayLim:
-            #         delayCount += 1
-            #     else:
-            #         toggleDirection = 1
-            #         delayCount = 0
-            #         # If desired cycles complete
-            #         if halfCycles == (noCycles*2 - 1):
-            #             break
-            #         if halfCycles%2: #If odd number of half cycles
-            #             halfCycles = halfCycles + 1
-            #         targetXTest = targetXTest + toggleDirection*oscStep
-            # else:
-            #     targetXTest = targetXTest + toggleDirection*oscStep
             ###
 
             ###
@@ -225,40 +195,32 @@ try:
             #     targetX = maxContract
             # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
 
-            # targetY = 0
-            # print(targetX, targetY)
-            #########################################
-
             # Return target cable lengths at target coords and jacobian at current coords
             [targetL, targetR, targetT, cJaco, cJpinv] = kine.cableLengths(currentX, currentY, targetX, targetY)
             # Get cable speeds using Jacobian at current point and calculation of input speed
             [lhsV, rhsV, topV, actualX, actualY] = kine.cableSpeeds(currentX, currentY, targetX, targetY, cJaco, cJpinv, tSecs)
             # Find actual target cable lengths based on scaled cable speeds that result in 'actual' coords
             [scaleTargL, scaleTargR, scaleTargT, repJaco, repJpinv] = kine.cableLengths(currentX, currentY, actualX, actualY)
-            # Get volumes, volrates, syringe speeds, pulse freq, step counts, & cablespeed estimate for each pump
-            [tVolL, vDotL, dDotL, fStepL, stepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, scaleTargL)
-            [tVolR, vDotR, dDotR, fStepR, stepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, scaleTargR)
-            [tVolT, vDotT, dDotT, fStepT, stepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, scaleTargT)
+            # Get volumes, volrates, syringe speeds, pulse freq & step counts estimate for each pump
+            [tVolL, vDotL, dDotL, fStepL, tStepL, tSpeedL, LcRealL, angleL] = kine.volRate(cVolL, cableL, scaleTargL)
+            [tVolR, vDotR, dDotR, fStepR, tStepR, tSpeedR, LcRealR, angleR] = kine.volRate(cVolR, cableR, scaleTargR)
+            [tVolT, vDotT, dDotT, fStepT, tStepT, tSpeedT, LcRealT, angleT] = kine.volRate(cVolT, cableT, scaleTargT)
             # CALCULATE FREQS FROM VALID STEP NUMBER
-            # stepL is master position, cStepL is current, speed controlled position.
-            dStepL = stepL - cStepL
-            dStepR = stepR - cStepR
-            dStepT = stepT - cStepT
-            fStepL = dStepL*SAMP_FREQ
-            fStepR = dStepR*SAMP_FREQ
-            fStepT = dStepT*SAMP_FREQ
-            [OCRL, OCRR, OCRT, LStep, RStep, TStep] = kine.freqScale(fStepL, fStepR, fStepT)
+            # tStepL is target pump position, cStepL is current, speed controlled position.
+            fStepL = (tStepL - cStepL)*SAMP_FREQ
+            fStepR = (tStepR - cStepR)*SAMP_FREQ
+            fStepT = (tStepT - cStepT)*SAMP_FREQ
+            [LStep, RStep, TStep] = kine.freqScale(fStepL, fStepR, fStepT)
             StepNoL += LStep
             StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
             StepNoT += TStep
-            # Send step number to arduinos:
+            # Send scaled step number to arduinos:
             sendStep(lhs, StepNoL)
             sendStep(rhs, StepNoR)
             sendStep(top, StepNoT)
 
             # Update current position, cable lengths, and volumes as previous targets
-            # cJpinv = tJpinv
-            currentX = actualX # Set to actualX and Y?
+            currentX = actualX
             currentY = actualY
             cableL = scaleTargL
             cableR = scaleTargR
@@ -276,9 +238,13 @@ try:
             [realStepL, pressL, timeL] = listenReply(lhs)
             [realStepR, pressR, timeR] = listenReply(rhs)
             [realStepT, pressT, timeT] = listenReply(top)
-            # tock = time.perf_counter()
-            # elapsed = tock-tick
-            # print(f"{elapsed:0.4f}")
+            loopTimeL = timeL - cTimeL
+            loopTimeR = timeR - cTimeR
+            loopTimeT = timeT - cTimeT
+            print(loopTimeL, loopTimeR, loopTimeT)
+            cTimeL = timeL
+            cTimeR = timeR
+            cTimeT = timeT
             # print("Pressure: ", pressL, pressR, pressT)
             # print("Real Pos: ", realStepL, realStepR, realStepT)
             # print(targetL, targetR, targetT)
@@ -297,6 +263,12 @@ finally:
     # Stop program
     # Disable pumps and set them to idle state
     try:
+        # Save values gathered from arduinos
+        ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+            realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
+            realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+        ardLogging.ardSave()
+
         if lhs.is_open:
             sendStep(lhs, "Closed")
             [realStepL, pressL, timeL] = listenReply(lhs)
@@ -311,12 +283,6 @@ finally:
             sendStep(top, "Closed")
             [realStepT, pressT, timeT] = listenReply(top)
             print(realStepT, pressT, timeT)
-    
-            # Save values gathered from arduinos
-            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
-                realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-                realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
-            ardLogging.ardSave()
 
     except NameError:
         [lhs, reply] = connect("LHS", lhsCOM)

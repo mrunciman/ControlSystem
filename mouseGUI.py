@@ -73,6 +73,8 @@ class mouseTracker(kine):
         self.flag = 0
         self.param = 0
 
+
+
     # Mouse callback function
     def drawCables(self, event, x, y, flags, param):
         self.flag = flags
@@ -158,7 +160,6 @@ class mouseTracker(kine):
 
 
 
-
 # Lines below will be in controlSytem loop
 # Call function to instantiate canvas and set callback function
     def createTracker(self):
@@ -176,6 +177,8 @@ class mouseTracker(kine):
         cv2.namedWindow(self.windowName)
         # Bind drawCables mouse callback function to window
         cv2.setMouseCallback(self.windowName, self.drawCables)
+
+
 
     def iterateTracker(self, LHSPress, RHSPress, TOPPress):
         # Bind drawCables mouse callback function to window
@@ -206,6 +209,8 @@ class mouseTracker(kine):
         if cv2.waitKey(20) & 0xFF == 27:
             self.stopFlag = True
         return self.xCoord, self.yCoord, self.timeDiff, self.stopFlag
+
+
 
     def closeTracker(self):
         # cv2.waitKey = 27

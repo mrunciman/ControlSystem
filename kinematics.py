@@ -38,7 +38,8 @@ class kine:
         self.volFactor = 0.9024 #12.6195/15.066 # Ratio of real volume to theoretical volume
         self.calFactor = 0.01 # % of max vol still in actuator at calibration
         self.factAng = 1#75/90
-        self.maxV = self.factV*((mt.pi/2*self.factAng) - mt.cos((mt.pi/2*self.factAng))*mt.sin((mt.pi/2*self.factAng)))/((mt.pi/2*self.factAng)**2)
+        self.maxV = self.factV*((mt.pi/2*self.factAng) - \
+            mt.cos((mt.pi/2*self.factAng))*mt.sin((mt.pi/2*self.factAng)))/((mt.pi/2*self.factAng)**2)
         # print(self.maxV)
         
         # For step count:
@@ -78,15 +79,18 @@ class kine:
         # Lookup array of equally spaced theta values in interval 0 to pi/2
         self.numPoints = 10000
         self.theta = np.linspace(0, mt.pi/2, self.numPoints)
+        self.spacing = (mt.pi/2)/(self.numPoints-1)
         # theta = np.linspace(((mt.pi/2)/numPoints), mt.pi/2, numPoints-1)
         # Lookup array of cable contractions/length changes.
         # Numpy uses unnormalised sinc function so divide by pi. Using sinc
         # avoids divide by zero errors returned when computing np.sin(x)/x
         self.cableLookup = self.L0*(1 - np.sinc(self.theta/mt.pi)) # Lc lookup
+        self.derivL = np.gradient(self.cableLookup,self.spacing)
         # Avoid division by zero by prepending volLookup with zero.
         self.thetaNoZero = self.theta[1:self.numPoints]
         self.volLookup = (self.thetaNoZero - np.cos(self.thetaNoZero)*np.sin(self.thetaNoZero))/(self.thetaNoZero**2)
         self.volLookup = np.insert(self.volLookup, 0, 0, axis=None)
+        self.derivV = np.gradient(self.volLookup,self.spacing)
         # From pouch motors:
         # Add correction for when actuators are flat
         # P is pressure, Ce = 5.0e-6 Pa-1
@@ -262,7 +266,6 @@ class kine:
         """
         fList = np.array([fL, fR, fT])
         fAbs = np.absolute(fList)
-        OCR = np.array([0, 0, 0])
         fRound = np.array([0, 0, 0])
         # Find OCR and scale if any of the frequency values is non-zero
         if np.any(fList):
@@ -272,27 +275,14 @@ class kine:
             if fMax > self.MAX_FREQ:
                 fFact = self.MAX_FREQ/fMax
                 fScaled = fFact*fAbs
-                OCR[fScaled != 0] = np.ceil((self.CLOCK_FREQ/(self.PRESCALER*fScaled[fScaled != 0]))-1)
                 fScaled = fScaled*fSign
                 fList = fScaled
-                # print("Original: ", fList*timeStep, "   Scaled: ", fScaled*timeStep)
-            # Else use unscaled frequencies
-            else:
-                OCR[fAbs != 0] = np.ceil((self.CLOCK_FREQ/(self.PRESCALER*fAbs[fAbs != 0]))-1)
-                # for i in range(3):
-                #     if fAbs[i] == 0:
-                #         OCR[i] = 0
-                #     else:
-                #         OCR[i] = np.ceil((CLOCK_FREQ/(PRESCALER*fAbs[i]))-1)
+                # Else use unscaled frequencies
             fRound = np.around(self.timeStep*fList*fSign)
             fRound = fRound*fSign
             fRound = np.int_(fRound)
-            OCR = fSign*OCR
-        # Check for low frequency limit/upper limit of OCR, due to 16 bit timer
-        OCR[OCR > self.TWO2_16] = self.TWO2_16
-        OCR = np.int_(OCR)
 
-        return OCR[0], OCR[1], OCR[2], fRound[0], fRound[1], fRound[2]
+        return fRound[0], fRound[1], fRound[2]
 
 
 
