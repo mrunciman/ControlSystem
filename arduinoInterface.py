@@ -9,45 +9,46 @@ import time
 
 class ardInterfacer:
 
-    def __init__(self):
-        # No class attributes, to avoid overwriting data between methods
-        pass
+    def __init__(self, namePump, numPort):
+        self.pumpName = namePump
+        self.portNumber = numPort
+        self.ser = serial.Serial()
+        self.ser.port = 'COM%s' % (self.portNumber) 
+        self.ser.baudrate = 115200
+        self.ser.timeout = 0
+        self.ser.open()
     
 
-    def connect(self, pumpName, portNumber):
+    def connect(self):
         """
         Each pump requires verification of the cable it is contolling (top, lhs, or rhs).
         Pumps will function normally when the pumpName sent here matches the name hardcoded 
         on each arduino.
         e.g. top = connect("TOP", 4)
         """
-        message = pumpName + "\n"
+        message = self.pumpName + "\n"
         reply = ""
-        port = 'COM%s' % (portNumber)
-
-        #Open serial port at given COM port at 115200 baud rate
-        ser = serial.Serial(port = port, baudrate = 115200, timeout = 0) 
         message = message.encode('utf-8')    #Encode message
         time.sleep(1)     #give arduino time to set up (there are delays in arduino code for pressure sensor)
         while(1):
             time.sleep(0.5)     #delay before sending message again
-            ser.write(message)
+            self.ser.write(message)
             # print("Handshake: ", message)
-            if ser.in_waiting > 0:
-                reply = ser.readline().strip()
-                ser.reset_input_buffer()
+            if self.ser.in_waiting > 0:
+                reply = self.ser.readline().strip()
+                self.ser.reset_input_buffer()
                 reply = reply.decode('ascii')
 
-                if reply == pumpName:
-                    ser.reset_output_buffer()
+                if reply == self.pumpName:
+                    self.ser.reset_output_buffer()
                     break
 
         # return open serial connection to allow pumps to be controlled in main code
-        return ser, reply
+        return reply
 
 
 
-    def sendStep(self, ser, stepNumber):
+    def sendStep(self, stepNumber):
         """
         This function sends ideal position (stepNumber) then receives
         the real step count (stepCount) from arduino.
@@ -56,23 +57,23 @@ class ardInterfacer:
         message = "S" + str(stepNumber) + "\n"
         # print("Message: ", message)
         message = message.encode('utf-8')
-        ser.write(message)
+        self.ser.write(message)
         return
 
 
 
-    def listenReply(self, ser):
+    def listenReply(self):
         x = "e"
         stepPress = b""
         noBytes = 0
         # Wait here for reply - source of delay
         while noBytes == 0:
-            noBytes = ser.in_waiting
+            noBytes = self.ser.in_waiting
         # Read all bytes in input buffer
         # stepPress = ser.read(noBytes)
         # Check for end character
         while ord(x) != ord("E"):
-            x = ser.read()
+            x = self.ser.read()
             if x == b"":
                 break
             elif x == b"E":
@@ -82,8 +83,8 @@ class ardInterfacer:
         stepPress = stepPress.decode('utf-8')
         stepPress = stepPress.split(',')
         # print(stepPress)
-        ser.reset_input_buffer()
-        ser.reset_output_buffer()
+        self.ser.reset_input_buffer()
+        self.ser.reset_output_buffer()
         if stepPress == ['']:
             stepCount = "S_Empty" # Change this later to handle dropped values
             pumpPress = "P_Empty"
@@ -95,22 +96,22 @@ class ardInterfacer:
         return stepCount, pumpPress, pumpTime
 
 
-    def listenZero(self, ser, pumpZero):
+    def listenZero(self, isPumpZero):
         x = "e"
         stepPress = b""
-        while ser.in_waiting == 0:
+        while self.ser.in_waiting == 0:
             pass
         # Check for end character
         while ord(x) != ord("E"):
-            x = ser.read()
+            x = self.ser.read()
             if x == b"":
                 break
             elif x == b"E":
                 break
             stepPress = stepPress + x
 
-        # ser.reset_input_buffer()
-        # ser.reset_output_buffer()
+        # self.ser.reset_input_buffer()
+        # self.ser.reset_output_buffer()
         if stepPress == b"":
             stepCount = "S_Empty" # Change this later to handle dropped values
             pumpPress = "P_Empty"
@@ -123,6 +124,6 @@ class ardInterfacer:
             pumpPress = float(stepPress[1])/10
             pumpTime = stepPress[2]
 
-        if (pumpZero == True):
+        if (isPumpZero == True):
             stepCount = 0
         return stepCount, pumpPress, pumpTime

@@ -4,7 +4,7 @@ from numpy import linalg as la
 import csv
 import time
 import math as mt
-from kinematics import kine
+# from kinematics import kine
 import matplotlib.path as mpltPath
 import os
 
@@ -28,12 +28,12 @@ fontscale = 0.5
 colour = (0, 128, 0)
 thick = 1
 
-class mouseTracker(kine):
+class mouseTracker:
 
-    def __init__(self):
+    def __init__(self, triangleSide):
         # Resolution in mm/pixel (Geomagic touch res ~0.055 mm)
         self.resolution = 0.025
-        self.sideLength = kine.sideLength0
+        self.sideLength = triangleSide
         self.canvasX = int(self.sideLength/self.resolution)
         self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
         self.centreX = int(self.canvasX/2)
@@ -180,14 +180,14 @@ class mouseTracker(kine):
 
 
 
-    def iterateTracker(self, LHSPress, RHSPress, TOPPress):
+    def iterateTracker(self, LHSPress, RHSPress, TOPPress): # Pass arguments to iterateTracker, then to callback as params? 
         # Bind drawCables mouse callback function to window
         cv2.setMouseCallback(self.windowName, self.drawCables)
         # Display pressures:
         P_LHS_Text = "LHS Pressure / mbar = {:.2f}".format(LHSPress)
         P_RHS_Text = "RHS Pressure / mbar = {:.2f}".format(RHSPress)
         P_TOP_Text = "TOP Pressure / mbar = {:.2f}".format(TOPPress)
-        pPlaceLHS = (15, 25)
+        pPlaceLHS = (15,25)
         pPlaceRHS = (15,45)
         pPlaceTOP = (15,65)
         pressPlEnd = (int(self.canvasX*0.4), int(self.canvasY/6))

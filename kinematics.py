@@ -8,18 +8,18 @@ import numpy as np
 from numpy import linalg as la
 import math as mt
 
-sideLength = 18.911
+# sideLength = 18.911
 
-class kine:
-    sideLength0 = sideLength
-    def __init__(self):
+class kineSolver:
+    # sideLength0 = sideLength
+    def __init__(self, triangleSide):
 
         ##############################################################
         # Structure and actuators
         ##############################################################
         # Define parameters of system:
         # Side length of equilateral triangle in mm
-        self.sideLength = sideLength
+        self.sideLength = triangleSide
         # 'Flat' muscle length:
         self.L0 = 25/(1 - 2/mt.pi)
         # Excess length of cable between entry point and muscle, in mm
