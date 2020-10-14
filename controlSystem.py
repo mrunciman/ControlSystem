@@ -214,7 +214,9 @@ try:
             [tVolL, vDotL, dDotL, fStepL, tStepL, tSpeedL, LcRealL, angleL] = kineSolve.volRate(cVolL, cableL, scaleTargL)
             [tVolR, vDotR, dDotR, fStepR, tStepR, tSpeedR, LcRealR, angleR] = kineSolve.volRate(cVolR, cableR, scaleTargR)
             [tVolT, vDotT, dDotT, fStepT, tStepT, tSpeedT, LcRealT, angleT] = kineSolve.volRate(cVolT, cableT, scaleTargT)
-            print(tStepL, tStepR, tStepT)
+            print("Normal", tStepL, tStepR, tStepT)
+# VALIDATE IK WITH IDENTICAL TEST IN TWO AND THREEMUSCLE?
+
             # CALCULATE FREQS FROM VALID STEP NUMBER
             # tStepL is target pump position, cStepL is current, speed controlled position.
             fStepL = (tStepL - cStepL)*SAMP_FREQ
@@ -224,7 +226,7 @@ try:
             StepNoL += LStep
             StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
             StepNoT += TStep
-            # print(StepNoL, StepNoR, StepNoT)
+            print("Scaled: ", StepNoL, StepNoR, StepNoT)
             # Send scaled step number to arduinos:
             ardIntLHS.sendStep(StepNoL)
             ardIntRHS.sendStep(StepNoR)
