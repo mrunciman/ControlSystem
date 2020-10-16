@@ -54,20 +54,26 @@ class ardInterfacer:
         the real step count (stepCount) from arduino.
         steps = sendStep(serialConnection, stepNumber)
         """
-        message = "S" + str(stepNumber) + "\n"
-        # print("Message: ", message)
+        if type(stepNumber) != str:
+            stepString = "{:04d}".format(stepNumber)
+        else:
+            stepString = stepNumber
+        message = "S" + stepString + "\n"
+        # print("Message: ", repr(message))
         message = message.encode('utf-8')
         self.ser.write(message)
         return
 
 
 
-    def listenReply(self):
+    def listenReply(self, stepNumber):
         x = "e"
         stepPress = b""
-        noBytes = 0
+        noBytes = self.ser.in_waiting
         # Wait here for reply - source of delay
         while noBytes == 0:
+            # Spam arduino with step number message
+            # self.sendStep(stepNumber)
             noBytes = self.ser.in_waiting
         # Read all bytes in input buffer
         # stepPress = ser.read(noBytes)
@@ -83,8 +89,7 @@ class ardInterfacer:
         stepPress = stepPress.decode('utf-8')
         stepPress = stepPress.split(',')
         # print(stepPress)
-        self.ser.reset_input_buffer()
-        self.ser.reset_output_buffer()
+
         if stepPress == ['']:
             stepCount = "S_Empty" # Change this later to handle dropped values
             pumpPress = "P_Empty"

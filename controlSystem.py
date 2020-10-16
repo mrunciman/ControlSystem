@@ -87,9 +87,10 @@ StepNoL, StepNoR, StepNoT = stepL, stepR, stepT
 # Connect to Arduinos
 
 # Set COM port for each pump
-lhsCOM = 5
-rhsCOM = 4
-topCOM = 3
+lhsCOM = 19
+rhsCOM = 18
+topCOM = 17
+closeMessage = "Closed"
 
 try:
     ardIntLHS = ardInterfacer("LHS", lhsCOM)
@@ -107,9 +108,9 @@ try:
     calibL = False
     calibR = False
     calibT = False
-    calibration = True
+    calibration = False
     # Calibration ON if TRUE below:
-    while (calibration != True):
+    while (calibration != False):
         if not(calibL):
             [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL)
         if not(calibR):
@@ -191,33 +192,33 @@ try:
 
             ###
             # Set random target
-            if initialXFlag == True:
-                if randoPosition == False:
-                    targetXTest = random.uniform(leftLim, rightLim)
-                    randoPosition = True
-                else:
-                    targetXTest = currentX
-                    if delayCount < delayLim/2:
-                        delayCount += 1
-                    else:
-                        delayCount = 0
-                        randoPosition = False
+            # if initialXFlag == True:
+            #     if randoPosition == False:
+            #         targetXTest = random.uniform(leftLim, rightLim)
+            #         randoPosition = True
+            #     else:
+            #         targetXTest = currentX
+            #         if delayCount < delayLim/2:
+            #             delayCount += 1
+            #         else:
+            #             delayCount = 0
+            #             randoPosition = False
             ###
 
             ###
             # Initially pause at point determined by GUI
-            if initialXFlag == False:
-                targetXTest = mouseTrack.xCoord
-                if delayCount < delayLim:
-                    delayCount += 1
-                else:
-                    delayCount = 0
-                    initialXFlag = True
+            # if initialXFlag == False:
+            #     targetXTest = mouseTrack.xCoord
+            #     if delayCount < delayLim:
+            #         delayCount += 1
+            #     else:
+            #         delayCount = 0
+            #         initialXFlag = True
             ###
 
             # Ensure 1 decimal place
-            targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
-            targetX = targetXTest
+            # targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
+            # targetX = targetXTest
 
             # Limit input
             if targetX <= minContract:
@@ -226,8 +227,8 @@ try:
                 targetX = maxContract
             # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
 
-            targetY = 0
-            print(targetX, halfCycles)
+            # targetY = 0
+            # print(targetX, halfCycles)
             #########################################
 
 
@@ -253,8 +254,11 @@ try:
             StepNoT += TStep
             # Send step number to arduinos:
             ardIntLHS.sendStep(StepNoL)
+            [realStepL, pressL, timeL] = ardIntLHS.listenReply(StepNoL)
             ardIntRHS.sendStep(StepNoR)
+            [realStepR, pressR, timeR] = ardIntRHS.listenReply(StepNoR)
             ardIntTOP.sendStep(StepNoT)
+            [realStepT, pressT, timeT] = ardIntTOP.listenReply(StepNoT)
 
             # Update current position, cable lengths, and volumes as previous targets
             cJpinv = tJpinv
@@ -273,14 +277,13 @@ try:
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
 
-            [realStepL, pressL, timeL] = ardIntLHS.listenReply()
-            [realStepR, pressR, timeR] = ardIntRHS.listenReply()
-            [realStepT, pressT, timeT] = ardIntTOP.listenReply()
+
             # tock = time.perf_counter()
             # elapsed = tock-tick
             # print(f"{elapsed:0.4f}")
             # print("Pressure: ", pressL, pressR, pressT)
-            # print("Real Pos: ", realStepL, realStepR, realStepT)
+            print("Targ Pos: ", StepNoL, StepNoR, StepNoT)
+            print("Real Pos: ", realStepL, realStepR, realStepT)
             # print(targetL, targetR, targetT)
             # print(tVolL, tVolR, tVolT)
 
@@ -297,27 +300,27 @@ finally:
     # Stop program
     # Disable pumps and set them to idle state
     try:
+        # Save values gathered from arduinos
+        ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+            realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
+            realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+        ardLogging.ardSave()
+
         if ardIntLHS.ser.is_open:
-            sendStep(lhs, "Closed")
-            [realStepL, pressL, timeL] = ardIntLHS.listenReply()
+            ardIntLHS.sendStep(closeMessage)
+            [realStepL, pressL, timeL] = ardIntLHS.listenReply(closeMessage)
             print(realStepL, pressL, timeL)
 
         if ardIntRHS.ser.is_open:
-            sendStep(rhs, "Closed")
-            [realStepR, pressR, timeR] = ardIntRHS.listenReply()
+            ardIntRHS.sendStep(closeMessage)
+            [realStepR, pressR, timeR] = ardIntRHS.listenReply(closeMessage)
             print(realStepR, pressR, timeR)
         
         if ardIntTOP.ser.is_open:
-            sendStep(top, "Closed")
-            [realStepT, pressT, timeT] = ardIntTOP.listenReply()
+            ardIntTOP.sendStep(closeMessage)
+            [realStepT, pressT, timeT] = ardIntTOP.listenReply(closeMessage)
             print(realStepT, pressT, timeT)
     
-            # Save values gathered from arduinos
-            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
-                realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-                realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
-            ardLogging.ardSave()
-
     except NameError:
         reply = ardIntLHS.connect()
         print(reply)

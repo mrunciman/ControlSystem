@@ -16,7 +16,7 @@ location = os.path.dirname(__file__)
 logTime = time.strftime("%Y-%m-%d-_-%H-%M-%S")
 relative = "logs/positions " + logTime + ".csv"
 fileName = os.path.join(location, relative) # USE THIS IN REAL TESTS
-print(fileName)
+# print(fileName)
 # fileName = location + "/positions " + logTime + ".csv" 
 # fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog1: 
@@ -57,7 +57,7 @@ class mouseTracker(kine):
         # Give initial values for when class instance is made
         # Cast coordinates as floats for immutability, which allows tracking
         self.xCoord = 9.5#float(self.centreX*self.resolution)#
-        self.yCoord = 0.5#float(mt.tan(mt.pi/6)*self.centreX*self.resolution)#
+        self.yCoord = 5#float(mt.tan(mt.pi/6)*self.centreX*self.resolution)#
         self.xPix = int(self.xCoord/self.resolution)#centreX#750#int(self.xCoord/resolution)#
         self.yPix = self.canvasY - int(self.yCoord/self.resolution)#centreY#canvasY-5#
         self.mouseDown = False
