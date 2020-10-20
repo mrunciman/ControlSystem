@@ -38,7 +38,8 @@ class mouseTracker:
         self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
         self.centreX = int(self.canvasX/2)
         self.centreY = int(self.canvasY - mt.tan(mt.pi/6)*(self.canvasX/2))
-        self.radRestrictPix = 16.5/self.resolution #mm
+        self.radRestrictPix = 16/self.resolution #16 mm max contraction
+        self.radRestrPixSma = 4/self.resolution #4 mm minimum contraction
         self.mouseEvent = 0
 
         # Create background image
@@ -70,15 +71,15 @@ class mouseTracker:
         self.prevMillis = 0
         self.stopFlag = False
         self.logData = []
-        self.flag = 0
-        self.param = 0
+        self.Flags = None
+        self.xPathCoords = []
+        self.yPathCoords = []
 
 
 
     # Mouse callback function
     def drawCables(self, event, x, y, flags, param):
-        self.flag = flags
-        self.param = param
+        self.Flags = flags
         now = time.time()
         # Save time since beginning code in ms
         numMillis = now - self.start #Still in seconds
@@ -86,43 +87,49 @@ class mouseTracker:
         self.timeDiff = numMillis - self.prevMillis
         self.prevMillis = numMillis
         self.mouseEvent = event
+        # If path coordinates not specified, use mouse. Path has priority
+        if param is not None:
+            x = round(param[0]/self.resolution)
+            y = self.canvasY - round(param[1]/self.resolution)
+            self.mouseEvent = cv2.EVENT_MOUSEMOVE
 
         # Draw a 5pixel side square around current point
-        p1 = [self.xPix-self.num, self.yPix-self.num]
-        p2 = [self.xPix+self.num, self.yPix-self.num]
-        p3 = [self.xPix+self.num, self.yPix+self.num]
-        p4 = [self.xPix-self.num, self.yPix+self.num]
+        p1 = [self.xPix - self.num, self.yPix - self.num]
+        p2 = [self.xPix + self.num, self.yPix - self.num]
+        p3 = [self.xPix + self.num, self.yPix + self.num]
+        p4 = [self.xPix - self.num, self.yPix + self.num]
         neighbour = np.array([p1, p2, p3, p4])
         neighPath = mpltPath.Path(neighbour)
-        neighShape = neighbour.reshape((-1,1,2))
+        neighShape = neighbour.reshape((-1, 1, 2))
+        # Draw 'handle' box around EE
         cv2.polylines(self.bkGd, [neighShape], True, (0, 0, 0), 1)
-        # cv2.polylines(self.bkGd, [neighShape], True, (0, 0, 0), 1)
         # Check if position is within neighbourhood on down click
         # If inside, move end effector and log.
         touching = neighPath.contains_point([x, y])
         # Check if point is inside triangle workspace
-        insideTri = self.path.contains_point([x, y])
-        radDiff1 = np.array([[self.vt1[0]],[self.vt1[1]]])-np.array([[x], [y]])
-        radDiff2 = np.array([[self.vt2[0]],[self.vt2[1]]])-np.array([[x], [y]])
-        radDiff3 = np.array([[self.vt3[0]],[self.vt3[1]]])-np.array([[x], [y]])
-        proxVt1 = la.norm(radDiff1) < self.radRestrictPix
-        proxVt2 = la.norm(radDiff2) < self.radRestrictPix
-        proxVt3 = la.norm(radDiff3) < self.radRestrictPix
+        insideTri = self.path.contains_point([self.xPix, self.yPix])
+        radDiff1 = np.array([[self.vt1[0]], [self.vt1[1]]]) - np.array([[x], [y]])
+        radDiff2 = np.array([[self.vt2[0]], [self.vt2[1]]]) - np.array([[x], [y]])
+        radDiff3 = np.array([[self.vt3[0]], [self.vt3[1]]]) - np.array([[x], [y]])
+        proxVt1 = self.radRestrPixSma < la.norm(radDiff1) < self.radRestrictPix
+        proxVt2 = self.radRestrPixSma < la.norm(radDiff2) < self.radRestrictPix
+        proxVt3 = self.radRestrPixSma < la.norm(radDiff3) < self.radRestrictPix
         insideAll = insideTri*proxVt1*proxVt2*proxVt3
         # print(insideAll)
 
-        # Check if mouse button was pressed down (event 1)
-        if event == 1:
+        # Check if mouse button was pressed down (event = 1)
+            # or if params is not None
+        if (self.mouseEvent == cv2.EVENT_LBUTTONDOWN) or (param is not None):
             self.mouseDown = True
-            if touching == True:
+            if touching or (param is not None):
                 self.touchDown = True
 
-        # Check if mouse button released (event 4) and redraw
-        if event == 4:
+        # Check if mouse button released (event = 4) and redraw
+        if self.mouseEvent == cv2.EVENT_LBUTTONUP:
             self.mouseDown = False
             self.touchDown = False
             # If released inside triangle and within
-            # end effector handle, redraw cables blue
+            # square end effector handle, redraw cables light green
             if insideAll == True:
                 if touching == True:
                     cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (x, y), (0, 192, 0), 1)
@@ -133,28 +140,32 @@ class mouseTracker:
             if self.mouseDown == True:
                 if self.touchDown == True:
                     # Check if moving
-                    if event == 0:
-                        cv2.circle(self.bkGd, (x, y), self.radius, (0, 0, 0), -1)
-                        # Draw cables 
+                    if (self.mouseEvent == cv2.EVENT_MOUSEMOVE) or (param is not None):
+                        # Draw objects: 
                         self.bkGd[:,:] = (255, 255, 255)
                         cv2.circle(self.bkGd, (x, y), self.radius, (0, 0, 0), -1)
+                        # Entry point triangle
                         cv2.polylines(self.bkGd, [self.vts], True, (0, 0, 0), 1)
-                        cv2.circle(self.bkGd, (self.xPix, self.yPix), self.radius, (0, 0, 0), -1)
-                        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrictPix), (192,192,192), 1)
-                        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrictPix), (192,192,192), 1)
-                        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrictPix), (192,192,192), 1)
+                        # Draw circles with radius of max reach
+                        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrictPix), (192, 192, 192), 1)
+                        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrictPix), (192, 192, 192), 1)
+                        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrictPix), (192, 192, 192), 1)
+                        # Draw circles with radius of min reach
+                        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrPixSma), (192, 192, 192), 1)
+                        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrPixSma), (192, 192, 192), 1)
+                        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrPixSma), (192, 192, 192), 1)
+                        # Draw cables
                         cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (x, y), (0, 128, 0), 1)
                         cv2.line(self.bkGd, (self.vt2[0], self.vt2[1]), (x, y), (0, 128, 0), 1)
                         cv2.line(self.bkGd, (self.vt3[0], self.vt3[1]), (x, y), (0, 128, 0), 1)
-                        yPrime = self.canvasY - y
+                        # Find values in terms of triangle geometry, not pixels:
                         self.xPix = x
-                        self.xCoord = x*self.resolution
-                        # self.Coords[0] = x*resolution
                         self.yPix = y
+                        self.xCoord = self.xPix*self.resolution
+                        yPrime = self.canvasY - self.yPix
                         self.yCoord = yPrime*self.resolution
-                        # self.Coords[1] = yPrime*resolution
-                        # Collect tdata in list to be exported on exit
-                        self.logData.append([event] + [self.xCoord] + [self.yCoord] + [now] + [self.timeDiff])
+                        # Collect data in list to be exported on exit
+                        self.logData.append([self.mouseEvent] + [self.xCoord] + [self.yCoord] + [now] + [self.timeDiff])
         else:
             self.touchDown = False
 
@@ -167,22 +178,29 @@ class mouseTracker:
         cv2.polylines(self.bkGd, [self.vts], True, (0, 0, 0), 1)
         # Initial position of end effector (25, 14.435)
         cv2.circle(self.bkGd, (self.xPix, self.yPix), self.radius, (0, 0, 0), -1)
-        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrictPix), (192,192,192), 1)
-        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrictPix), (192,192,192), 1)
-        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrictPix), (192,192,192), 1)
+        # Draw circles with radius equal to max reach
+        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrictPix), (192, 192, 192), 1)
+        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrictPix), (192, 192, 192), 1)
+        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrictPix), (192, 192, 192), 1)
+        # Draw circles with radius of min reach
+        cv2.circle(self.bkGd, (self.vt1[0], self.vt1[1]), int(self.radRestrPixSma), (192, 192, 192), 1)
+        cv2.circle(self.bkGd, (self.vt2[0], self.vt2[1]), int(self.radRestrPixSma), (192, 192, 192), 1)
+        cv2.circle(self.bkGd, (self.vt3[0], self.vt3[1]), int(self.radRestrPixSma), (192, 192, 192), 1)
+        # Draw cables in intial position
         cv2.line(self.bkGd, (self.vt1[0], self.vt1[1]), (self.xPix, self.yPix), (0, 128, 0), 1)
         cv2.line(self.bkGd, (self.vt2[0], self.vt2[1]), (self.xPix, self.yPix), (0, 128, 0), 1)
         cv2.line(self.bkGd, (self.vt3[0], self.vt3[1]), (self.xPix, self.yPix), (0, 128, 0), 1)
-        # Create a window with  given name
+        # Create a window with a given name
         cv2.namedWindow(self.windowName)
         # Bind drawCables mouse callback function to window
         cv2.setMouseCallback(self.windowName, self.drawCables)
 
 
 
-    def iterateTracker(self, LHSPress, RHSPress, TOPPress): # Pass arguments to iterateTracker, then to callback as params? 
+    def iterateTracker(self, LHSPress, RHSPress, TOPPress, pathCoords = None):
+        # Pass arguments to iterateTracker, then to callback as params
         # Bind drawCables mouse callback function to window
-        cv2.setMouseCallback(self.windowName, self.drawCables)
+        cv2.setMouseCallback(self.windowName, self.drawCables, param = pathCoords)
         # Display pressures:
         P_LHS_Text = "LHS Pressure / mbar = {:.2f}".format(LHSPress)
         P_RHS_Text = "RHS Pressure / mbar = {:.2f}".format(RHSPress)
@@ -195,13 +213,20 @@ class mouseTracker:
         cv2.putText(self.bkGd, P_LHS_Text, pPlaceLHS, font, fontscale, colour, thick, cv2.LINE_AA)
         cv2.putText(self.bkGd, P_RHS_Text, pPlaceRHS, font, fontscale, colour, thick, cv2.LINE_AA)
         cv2.putText(self.bkGd, P_TOP_Text, pPlaceTOP, font, fontscale, colour, thick, cv2.LINE_AA)
-        # Redraw position text
-        if self.mouseEvent ==0:
+        # Draw Path points if they are given
+        if pathCoords is not None:
+            for i in range(len(self.xPathCoords)):
+                bkGdX = round(self.xPathCoords[i]/self.resolution)
+                bkGdY = self.canvasY - round(self.yPathCoords[i]/self.resolution)
+                self.bkGd[bkGdY, bkGdX] = [0, 0, 255]
+
+        # Redraw position text if moving
+        if self.mouseEvent == 0:
             posText = "({:.2f}, {:.2f})".format(self.xCoord, self.yCoord)
-            placeEE = (self.xPix-60, self.yPix-15)
-            placeEERec = (self.xPix-60, self.yPix-30) 
-            placeEEEnd = (self.xPix+60, self.yPix-12)
-            cv2.rectangle(self.bkGd, placeEERec, placeEEEnd, (255,255,255), -1)
+            placeEE = (self.xPix - 60, self.yPix - 15)
+            placeEERec = (self.xPix - 60, self.yPix - 30) 
+            placeEEEnd = (self.xPix + 60, self.yPix - 12)
+            cv2.rectangle(self.bkGd, placeEERec, placeEEEnd, (255, 255, 255), -1)
             cv2.putText(self.bkGd, posText, placeEE, font, fontscale, colour, thick, cv2.LINE_AA)
         # Display image
         cv2.imshow(self.windowName, self.bkGd)

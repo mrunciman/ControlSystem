@@ -15,6 +15,7 @@ with open ("C:/Users/msrun/OneDrive - Imperial College London/Imperial/Fluidic C
         yCoord = row[1]
         xCoordList.append(xCoord)
         yCoordList.append(yCoord)
+        # Multiply by mouseGUI resolution to get pixel values
 
 while cycleCounter < 3:
     print(xCoordList[pathCounter], yCoordList[pathCounter])

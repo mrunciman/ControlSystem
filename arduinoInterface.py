@@ -54,8 +54,12 @@ class ardInterfacer:
         the real step count (stepCount) from arduino.
         steps = sendStep(serialConnection, stepNumber)
         """
-        message = "S" + str(stepNumber) + "\n"
-        # print("Message: ", message)
+        if type(stepNumber) != str:
+            stepString = "{:04d}".format(stepNumber)
+        else:
+            stepString = stepNumber
+        message = "S" + stepString + "\n"
+        # print("Message: ", repr(message))
         message = message.encode('utf-8')
         self.ser.write(message)
         return
@@ -65,7 +69,7 @@ class ardInterfacer:
     def listenReply(self):
         x = "e"
         stepPress = b""
-        noBytes = 0
+        noBytes = self.ser.in_waiting
         # Wait here for reply - source of delay
         while noBytes == 0:
             noBytes = self.ser.in_waiting

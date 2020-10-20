@@ -34,3 +34,14 @@ class optiTracker:
 # FrameOfData(frameno=253179, sets={b'all': []}, other_markers=[(0.090259850025177, 0.2434762716293335, 0.015366792678833008), (0.08073146641254425, 0.0025320868007838726, -0.0681605339050293), (0.0714418888092041, -0.23710662126541138, -0.15255498886108398)], rigid_bodies=[], skeletons=[], labeled_markers=[LabeledMarker(id=5028, position=(0.090259850025177, 0.2434762716293335, 0.015366792678833008), size=0.011802209541201591, occluded=False, point_cloud_solved=True, model_solved=False), LabeledMarker(id=5029, position=(0.08073146641254425, 0.0025320868007838726, -0.0681605339050293), size=0.0121090617030859, occluded=False, point_cloud_solved=True, model_solved=False), LabeledMarker(id=5030, position=(0.0714418888092041, -0.23710662126541138, -0.15255498886108398), size=0.013170532882213593, occluded=False, point_cloud_solved=True, model_solved=False)], latency=0.2362000048160553, timecode=(0, 0), timestamp=2109.825, is_recording=False, tracked_models_changed=False)
 # [LabeledMarker(id=5028, position=(0.09026548266410828, 0.2434368133544922, 0.015464067459106445), size=0.011778432875871658, occluded=False, point_cloud_solved=True, model_solved=False), LabeledMarker(id=5029, position=(0.08076581358909607, 0.0025018169544637203, -0.06814271211624146), size=0.012079177424311638, occluded=False, point_cloud_solved=True, model_solved=False), LabeledMarker(id=5030, position=(0.0714956670999527, -0.23715823888778687, -0.15259003639221191), size=0.013163866475224495, occluded=False, point_cloud_solved=True, model_solved=False)]
 # LabeledMarker(id=5029, position=(0.08076213300228119, 0.0024986625649034977, -0.06813696026802063), size=0.012080874294042587, occluded=False, point_cloud_solved=True, model_solved=False)
+
+
+# For closed loop:
+
+# Distinguish markers and calculate entry point positions
+# Calculate distances between entry points and end effector (cable lengths)
+# Smooth or filter incoming values
+# Convert cable lengths to volumes (lookup tables)
+# Convert volume to step number (stepper positions)
+# Calculate error and new, controlled step number
+# Send to arduinos

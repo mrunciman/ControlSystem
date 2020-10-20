@@ -56,6 +56,7 @@ class kineSolver:
         self.stepsPMM = (self.StepPerRev*self.Microsteps)/(self.Lead) # steps per mm
         self.stepsPV = self.stepsPMM/self.As # Steps per mm^3
         self.maxSteps = self.stepsPV*self.maxV # number of steps needed to fill pouch
+        self.minSteps = 500
         # print(maxSteps)
         self.timeStep = 6/125 # Inverse of sampling frequency on arduinos
         self.cableSpeedLim = 4 # mm/s
@@ -241,6 +242,10 @@ class kineSolver:
         # Find current and target volume and displacement of syringe
         # [cV, cD] = length2Vol(cCable)
         [tVol, tSpeed, stepNo, LcDisc, angleDisc] = self.length2Vol(cCable, tCable)
+        if stepNo > self.maxSteps*self.volFactor:
+            stepNo = self.maxSteps*self.volFactor
+        if stepNo < self.minSteps:
+            stepNo = self.minSteps
         # Calculate linear approximation of volume rate:
         volDiff = tVol-cVol
         vDot = (volDiff)/self.timeStep #timeSecs  # mm^3/s
