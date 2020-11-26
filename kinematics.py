@@ -86,12 +86,12 @@ class kineSolver:
         # Numpy uses unnormalised sinc function so divide by pi. Using sinc
         # avoids divide by zero errors returned when computing np.sin(x)/x
         self.cableLookup = self.L0*(1 - np.sinc(self.theta/mt.pi)) # Lc lookup
-        self.derivL = np.gradient(self.cableLookup,self.spacing)
+        self.derivL = np.gradient(self.cableLookup, self.spacing)
         # Avoid division by zero by prepending volLookup with zero.
         self.thetaNoZero = self.theta[1:self.numPoints]
         self.volLookup = (self.thetaNoZero - np.cos(self.thetaNoZero)*np.sin(self.thetaNoZero))/(self.thetaNoZero**2)
         self.volLookup = np.insert(self.volLookup, 0, 0, axis=None)
-        self.derivV = np.gradient(self.volLookup,self.spacing)
+        self.derivV = np.gradient(self.volLookup, self.spacing)
         # From pouch motors:
         # Add correction for when actuators are flat
         # P is pressure, Ce = 5.0e-6 Pa-1

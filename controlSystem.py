@@ -16,7 +16,8 @@ from kinematics import kineSolver
 from mouseGUI import mouseTracker
 from ardLogger import ardLogger
 from streaming import optiTracker
-import csv
+from path import pathGenerator
+import traceback
 # import math
 # import random
 
@@ -28,33 +29,24 @@ kineSolve = kineSolver(sideLength)
 mouseTrack = mouseTracker(sideLength)
 ardLogging = ardLogger()
 opTrack = optiTracker()
-
+pathGen = pathGenerator(sideLength)
 ############################################################
 pathCounter = 0
 cycleCounter = 0
-with open ("C:/Users/mruncima/OneDrive - Imperial College London/Imperial/Fluidic Control/ControlSystem/paths/circCoords 2020-10-19.csv",\
-    mode = 'r', newline='') as pathFile:
-    coordList = csv.reader(pathFile, delimiter=',')
-    xCoordList = []
-    yCoordList = []
-    for row in coordList:
-        xCoord = float(row[0])
-        yCoord = float(row[1])
-        xCoordList.append(xCoord)
-        yCoordList.append(yCoord)
-        
-# print(xCoordList[0], yCoordList[0])
+pathGen.rasterScan()
+pathGen.generatePath()
 
-mouseTrack.xCoord = xCoordList[0]
-mouseTrack.yCoord = yCoordList[0]
-mouseTrack.xPathCoords = xCoordList
-mouseTrack.yPathCoords = yCoordList
+# Use mouse as primary?
+useMouse = False
 
-
+if not useMouse:
+    mouseTrack.xCoord = pathGen.xPath[0]
+    mouseTrack.yCoord = pathGen.yPath[0]
+    mouseTrack.xPathCoords = pathGen.xPath
+    mouseTrack.yPathCoords = pathGen.yPath
 
 # Initialise variables 
 SAMP_FREQ = 1/kineSolve.timeStep
-
 flagStop = False
 
 # Target must be cast as immutable type (float, in this case) so that 
@@ -62,11 +54,10 @@ flagStop = False
 currentX = mouseTrack.xCoord
 currentY = mouseTrack.yCoord
 targetX = mouseTrack.xCoord
-targetXTest = targetX
 targetY = mouseTrack.yCoord
 toggleDirection = 1
 delayCount = 0
-delayLim = 100
+delayLim = 200
 # inLim1 = 0.08 # 32% of side length (17 mm contraction)
 # inLim2 = 0.92 # 92% of side length (2 mm contraction)
 oscStep = 0.1
@@ -84,6 +75,7 @@ noCycles = 30
 cVolL, cVolR, cVolT = 0, 0, 0
 cableL, cableR, cableT = kineSolve.sideLength, kineSolve.sideLength, kineSolve.sideLength
 [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
+print(targetL, targetR, targetT)
 repJaco = cJaco
 repJpinv = cJpinv
 
@@ -140,15 +132,16 @@ try:
     calibL = False
     calibR = False
     calibT = False
-    calibration = False
-    # Calibration ON if TRUE below:
-    while (calibration != False):
-        if not(calibL):
-            [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL)
-        if not(calibR):
-            [realStepR, pressR, timeR] = ardIntRHS.listenZero(calibR)
-        if not(calibT):
-            [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT)
+    # Has the mechanism been calibrated/want to run without calibration?:
+    calibrated = True
+    # Perform calibration:
+    while (not calibrated):
+        # if not(calibL):
+        [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL, pressL, timeL)
+        # if not(calibR):
+        [realStepR, pressR, timeR] = ardIntRHS.listenZero(calibR, pressR, timeR)
+        # if not(calibT):
+        [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT, pressT, timeT)
         print(realStepL, pressL)
         print(realStepR, pressR)
         print(realStepT, pressT)
@@ -159,7 +152,7 @@ try:
         if (realStepT == "0000TOP"):
             calibT = True
         if (calibL * calibR * calibT == 1):
-            calibration = True
+            calibrated = True
             # Send 0s instead of StepNo as signal that calibration done
             ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
                 realStepR, LcRealR, angleR, 0, pressR, timeR,\
@@ -172,154 +165,118 @@ try:
 
     ################################################################
     # Begin main loop
-    try:
-        # Bring up GUI
-        mouseTrack.createTracker()
-        while(flagStop == False):
-            XYPathCoords = [xCoordList[pathCounter], yCoordList[pathCounter]]
-            pathCounter += 1
-            if pathCounter >= len(xCoordList):
-                pathCounter = 0
-                cycleCounter += 1
-                if cycleCounter > 3:
-                    break
 
-            [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT, XYPathCoords)
-            targetX = XYPathCoords[0]
-            targetY = XYPathCoords[1]
-            print(targetX, targetY)
-            tSecs = tMillis/1000
+    # Bring up GUI
+    mouseTrack.createTracker()
+    while(flagStop == False):
 
-            # Do cable and syringe calculations:
-            # Get target lengths and Jacobian from target point
+        if delayCount < delayLim:
+            delayCount += 1
+            pathCounter = 0
+        XYPathCoords = [pathGen.xPath[pathCounter], pathGen.yPath[pathCounter]]
+        pathCounter += 1
+        if pathCounter >= len(pathGen.xPath):
+            pathCounter = 0
+            print(cycleCounter)
+            cycleCounter += 1
+            if cycleCounter > noCycles:
+                break
 
-            ##########################################
-            # Manually set targets here
+        if useMouse:
+            XYPathCoords = None
 
-            ###
-            # Discretise input:
-            # targetY = 0
-            # targetX = kineSolve.sideLength*round(targetX/(kineSolve.sideLength/10))/10
-            ###
+        [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT, XYPathCoords)
+        tSecs = tMillis/1000
+        # Return target cable lengths at target coords and jacobian at current coords
+        [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
+        # Get cable speeds using Jacobian at current point and calculation of input speed
+        [lhsV, rhsV, topV, actualX, actualY] = kineSolve.cableSpeeds(currentX, currentY, targetX, targetY, cJaco, cJpinv, tSecs)
+        # Compare to naive/no speed control calculation of before:
+        # [tVolL1, vDotL1, dDotL1, fStepL1, tStepL1, tSpeedL1, LcRealL1, angleL1] = kineSolve.volRate(cVolL, cableL, targetL)
+        # [tVolR1, vDotR1, dDotR1, fStepR1, tStepR1, tSpeedR1, LcRealR1, angleR1] = kineSolve.volRate(cVolR, cableR, targetR)
+        # [tVolT1, vDotT1, dDotT1, fStepT1, tStepT1, tSpeedT1, LcRealT1, angleT1] = kineSolve.volRate(cVolT, cableT, targetT)
+        # Find actual target cable lengths based on scaled cable speeds that result in 'actual' coords
+        [scaleTargL, scaleTargR, scaleTargT, repJaco, repJpinv] = kineSolve.cableLengths(currentX, currentY, actualX, actualY)
+        # Get volumes, volrates, syringe speeds, pulse freq & step counts estimate for each pump
+        [tVolL, vDotL, dDotL, fStepL, tStepL, tSpeedL, LcRealL, angleL] = kineSolve.volRate(cVolL, cableL, scaleTargL)
+        [tVolR, vDotR, dDotR, fStepR, tStepR, tSpeedR, LcRealR, angleR] = kineSolve.volRate(cVolR, cableR, scaleTargR)
+        [tVolT, vDotT, dDotT, fStepT, tStepT, tSpeedT, LcRealT, angleT] = kineSolve.volRate(cVolT, cableT, scaleTargT)
+        # print("Normal", tStepL, tStepR, tStepT)
 
-            ###
-            ## Set random target
-            # if initialXFlag == True:
-            #     if randoPosition == False:
-            #         targetXTest = random.uniform(leftLim, rightLim)
-            #         randoPosition = True
-            #     else:
-            #         targetXTest = currentX
-            #         if delayCount < delayLim/2:
-            #             delayCount += 1
-            #         else:
-            #             delayCount = 0
-            #             randoPosition = False
-            ###
+        # CALCULATE FREQS FROM VALID STEP NUMBER
+        # tStepL is target pump position, cStepL is current, speed controlled position.
+        fStepL = (tStepL - cStepL)*SAMP_FREQ
+        fStepR = (tStepR - cStepR)*SAMP_FREQ
+        fStepT = (tStepT - cStepT)*SAMP_FREQ
+        [LStep, RStep, TStep] = kineSolve.freqScale(fStepL, fStepR, fStepT)
+        StepNoL += LStep
+        StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
+        StepNoT += TStep
+        # Send scaled step number to arduinos:
+        ardIntLHS.sendStep(StepNoL)
+        ardIntRHS.sendStep(StepNoR)
+        ardIntTOP.sendStep(StepNoT)
 
-            ###
-            ## Initially pause at point determined by GUI
-            # if initialXFlag == False:
-            #     targetXTest = mouseTrack.xCoord
-            #     if delayCount < delayLim:
-            #         delayCount += 1
-            #     else:
-            #         delayCount = 0
-            #         initialXFlag = True
-            ###
+        # Update current position, cable lengths, and volumes as previous targets
+        currentX = actualX
+        currentY = actualY
+        cableL = scaleTargL
+        cableR = scaleTargR
+        cableT = scaleTargT
+        cVolL = tVolL
+        cVolR = tVolR
+        cVolT = tVolT
+        cStepL = StepNoL
+        cStepR = StepNoR
+        cStepT = StepNoT
+        ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
+            realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
+            realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
 
-            ## Ensure 1 decimal place
-            # targetXTest = round(100*targetXTest)/100 # Will only allow a step oscStep with 2 decimal places
-            # targetX = targetXTest
 
-            # Limit input
-            # if targetX <= minContract:
-            #     targetX = minContract
-            # elif targetX >=maxContract:
-            #     targetX = maxContract
-            # Add proximity restriction to top vertex as well, where both x = side/2 and y = maxY
+        [realStepL, pressL, timeL] = ardIntLHS.listenReply()
+        [realStepR, pressR, timeR] = ardIntRHS.listenReply()
+        [realStepT, pressT, timeT] = ardIntTOP.listenReply()
+        # print("Targ Pos: ", StepNoL, StepNoR, StepNoT)
+        # print("Scal Pos: ", StepNoL, StepNoR, StepNoT)
+        # print("Real Pos: ", realStepL, realStepR, realStepT)
+        # diffStepL = int(realStepL) - cRealStepL
+        # diffStepR = int(realStepR)- cRealStepR
+        # diffStepT = int(realStepT) - cRealStepT
+        # Check if muscles stop at same time - suggests IK working
+        # print(diffStepL==0, diffStepR==0, diffStepT==0)
+        # print(diffStepL, diffStepR, diffStepT)
+        # loopTimeL = int(timeL) - cTimeL
+        # loopTimeR = int(timeR) - cTimeR
+        # loopTimeT = int(timeT) - cTimeT
+        # cRealStepL = int(realStepL)
+        # cRealStepR = int(realStepR)
+        # cRealStepT = int(realStepT)
+        # cTimeL = int(timeL)
+        # cTimeR = int(timeR)
+        # cTimeT = int(timeT)
+        # print("Pressure: ", pressL, pressR, pressT)
+        # print("Real Pos: ", realStepL, realStepR, realStepT)
+        # print(targetL, targetR, targetT)
+        # print(tVolL, tVolR, tVolT)
 
-            # Return target cable lengths at target coords and jacobian at current coords
-            [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
-            # Get cable speeds using Jacobian at current point and calculation of input speed
-            [lhsV, rhsV, topV, actualX, actualY] = kineSolve.cableSpeeds(currentX, currentY, targetX, targetY, cJaco, cJpinv, tSecs)
-            # Compare to naive/no speed control calculation of before:
-            # [tVolL1, vDotL1, dDotL1, fStepL1, tStepL1, tSpeedL1, LcRealL1, angleL1] = kineSolve.volRate(cVolL, cableL, targetL)
-            # [tVolR1, vDotR1, dDotR1, fStepR1, tStepR1, tSpeedR1, LcRealR1, angleR1] = kineSolve.volRate(cVolR, cableR, targetR)
-            # [tVolT1, vDotT1, dDotT1, fStepT1, tStepT1, tSpeedT1, LcRealT1, angleT1] = kineSolve.volRate(cVolT, cableT, targetT)
-            # Find actual target cable lengths based on scaled cable speeds that result in 'actual' coords
-            [scaleTargL, scaleTargR, scaleTargT, repJaco, repJpinv] = kineSolve.cableLengths(currentX, currentY, actualX, actualY)
-            # Get volumes, volrates, syringe speeds, pulse freq & step counts estimate for each pump
-            [tVolL, vDotL, dDotL, fStepL, tStepL, tSpeedL, LcRealL, angleL] = kineSolve.volRate(cVolL, cableL, scaleTargL)
-            [tVolR, vDotR, dDotR, fStepR, tStepR, tSpeedR, LcRealR, angleR] = kineSolve.volRate(cVolR, cableR, scaleTargR)
-            [tVolT, vDotT, dDotT, fStepT, tStepT, tSpeedT, LcRealT, angleT] = kineSolve.volRate(cVolT, cableT, scaleTargT)
-            # print("Normal", tStepL, tStepR, tStepT)
-
-            # CALCULATE FREQS FROM VALID STEP NUMBER
-            # tStepL is target pump position, cStepL is current, speed controlled position.
-            fStepL = (tStepL - cStepL)*SAMP_FREQ
-            fStepR = (tStepR - cStepR)*SAMP_FREQ
-            fStepT = (tStepT - cStepT)*SAMP_FREQ
-            [LStep, RStep, TStep] = kineSolve.freqScale(fStepL, fStepR, fStepT)
-            StepNoL += LStep
-            StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
-            StepNoT += TStep
-            # Send scaled step number to arduinos:
-            ardIntLHS.sendStep(StepNoL)
-            ardIntRHS.sendStep(StepNoR)
-            ardIntTOP.sendStep(StepNoT)
-
-            # Update current position, cable lengths, and volumes as previous targets
-            currentX = actualX
-            currentY = actualY
-            cableL = scaleTargL
-            cableR = scaleTargR
-            cableT = scaleTargT
-            cVolL = tVolL
-            cVolR = tVolR
-            cVolT = tVolT
-            cStepL = StepNoL
-            cStepR = StepNoR
-            cStepT = StepNoT
-            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
-                realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-                realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+    flagStop = mouseTrack.closeTracker()
 
 
 
-            [realStepL, pressL, timeL] = ardIntLHS.listenReply()
-            [realStepR, pressR, timeR] = ardIntRHS.listenReply()
-            [realStepT, pressT, timeT] = ardIntTOP.listenReply()
-            # print("Targ Pos: ", StepNoL, StepNoR, StepNoT)
-            # print("Scal Pos: ", StepNoL, StepNoR, StepNoT)
-            # print("Real Pos: ", realStepL, realStepR, realStepT)
-            # diffStepL = int(realStepL) - cRealStepL
-            # diffStepR = int(realStepR)- cRealStepR
-            # diffStepT = int(realStepT) - cRealStepT
-            # Check if muscles stop at same time - suggests IK working
-            # print(diffStepL==0, diffStepR==0, diffStepT==0)
-            # print(diffStepL, diffStepR, diffStepT)
-            # loopTimeL = int(timeL) - cTimeL
-            # loopTimeR = int(timeR) - cTimeR
-            # loopTimeT = int(timeT) - cTimeT
-            # cRealStepL = int(realStepL)
-            # cRealStepR = int(realStepR)
-            # cRealStepT = int(realStepT)
-            # cTimeL = int(timeL)
-            # cTimeR = int(timeR)
-            # cTimeT = int(timeT)
-            # print("Pressure: ", pressL, pressR, pressT)
-            # print("Real Pos: ", realStepL, realStepR, realStepT)
-            # print(targetL, targetR, targetT)
-            # print(tVolL, tVolR, tVolT)
+except TypeError as exTE:
+    tb_linesTE = traceback.format_exception(exTE.__class__, exTE, exTE.__traceback__)
+    tb_textTE = ''.join(tb_linesTE)
+    print(tb_textTE)
 
-        flagStop = mouseTrack.closeTracker()
+except KeyboardInterrupt as ctrlC:
+    print(ctrlC)
 
-    except KeyboardInterrupt:
-        pass
+    # except Exception as ex:
+    #     tb_lines = traceback.format_exception(ex.__class__, ex, ex.__traceback__)
+    #     tb_text = ''.join(tb_lines)
+    #     print(tb_text)
     
-except KeyboardInterrupt:
-    pass
 
 finally:
     ###########################################################################
@@ -331,21 +288,23 @@ finally:
             realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
             realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
         ardLogging.ardSave()
+        flagStop = mouseTrack.closeTracker()
 
         if ardIntLHS.ser.is_open:
             ardIntLHS.sendStep(closeMessage)
-            [realStepL, pressL, timeL] = ardIntLHS.listenReply()
-            print(realStepL, pressL, timeL)
 
         if ardIntRHS.ser.is_open:
             ardIntRHS.sendStep(closeMessage)
-            [realStepR, pressR, timeR] = ardIntRHS.listenReply()
-            print(realStepR, pressR, timeR)
         
         if ardIntTOP.ser.is_open:
             ardIntTOP.sendStep(closeMessage)
-            [realStepT, pressT, timeT] = ardIntTOP.listenReply()
-            print(realStepT, pressT, timeT)
+
+        [realStepL, pressL, timeL] = ardIntLHS.listenReply()
+        print(realStepL, pressL, timeL)
+        [realStepR, pressR, timeR] = ardIntRHS.listenReply()
+        print(realStepR, pressR, timeR)
+        [realStepT, pressT, timeT] = ardIntTOP.listenReply()
+        print(realStepT, pressT, timeT)
 
     except NameError:
         reply = ardIntLHS.connect()
@@ -354,6 +313,11 @@ finally:
         print(reply)
         reply = ardIntTOP.connect()
         print(reply)
+
+    except TypeError as exTE:
+        tb_linesTE = traceback.format_exception(exTE.__class__, exTE, exTE.__traceback__)
+        tb_textTE = ''.join(tb_linesTE)
+        # print(tb_textTE)
 
     # Close serial connections
     ardIntLHS.ser.close()
