@@ -16,7 +16,7 @@ from kinematics import kineSolver
 from mouseGUI import mouseTracker
 from ardLogger import ardLogger
 from streaming import optiTracker
-from path import pathGenerator
+import csv
 import traceback
 # import math
 # import random
@@ -29,21 +29,33 @@ kineSolve = kineSolver(sideLength)
 mouseTrack = mouseTracker(sideLength)
 ardLogging = ardLogger()
 opTrack = optiTracker()
-pathGen = pathGenerator(sideLength)
 ############################################################
 pathCounter = 0
 cycleCounter = 0
-pathGen.rasterScan()
-pathGen.generatePath()
+
+# Count number of reps 
+halfCycles = 0
+noCycles = 3
+# Use different methods for different paths
+
+xPath = []
+yPath = []
+# Read directly from file for speed?
+with open('paths/raster 2020-11-30 11-00-33 0.5B0.05H18.911EqSide.csv', newline = '') as csvPath:
+    coordReader = csv.reader(csvPath)
+    for row in coordReader:
+        xPath.append(float(row[0]))
+        yPath.append(float(row[1]))
+
 
 # Use mouse as primary?
 useMouse = False
 
 if not useMouse:
-    mouseTrack.xCoord = pathGen.xPath[0]
-    mouseTrack.yCoord = pathGen.yPath[0]
-    mouseTrack.xPathCoords = pathGen.xPath
-    mouseTrack.yPathCoords = pathGen.yPath
+    mouseTrack.xCoord = xPath[0]
+    mouseTrack.yCoord = yPath[0]
+    mouseTrack.xPathCoords = xPath[0: int(len(xPath)/noCycles)]  #Down-sample path here for display
+    mouseTrack.yPathCoords = yPath[0: int(len(yPath)/noCycles)]
 
 # Initialise variables 
 SAMP_FREQ = 1/kineSolve.timeStep
@@ -58,18 +70,10 @@ targetY = mouseTrack.yCoord
 toggleDirection = 1
 delayCount = 0
 delayLim = 200
-# inLim1 = 0.08 # 32% of side length (17 mm contraction)
-# inLim2 = 0.92 # 92% of side length (2 mm contraction)
-oscStep = 0.1
-maxContract = 17
-minContract = 2
-leftLim = kineSolve.sideLength - maxContract # 17 mm contraction wrt LHS vertex
-rightLim = kineSolve.sideLength - minContract # 2 mm contraction wrt LHS vertex
+
 initialXFlag = False
 randoPosition = False
-# Count number of reps 
-halfCycles = 0
-noCycles = 30
+
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT = 0, 0, 0
@@ -112,9 +116,9 @@ StepNoL, StepNoR, StepNoT = tStepL, tStepR, tStepT
 # Connect to Arduinos
 
 # Set COM port for each pump
-lhsCOM = 19
-rhsCOM = 18
-topCOM = 17
+lhsCOM = 8
+rhsCOM = 6
+topCOM = 7
 closeMessage = "Closed"
 try:
     ardIntLHS = ardInterfacer("LHS", lhsCOM)
@@ -133,7 +137,7 @@ try:
     calibR = False
     calibT = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = True
+    calibrated = False
     # Perform calibration:
     while (not calibrated):
         # if not(calibL):
@@ -173,14 +177,16 @@ try:
         if delayCount < delayLim:
             delayCount += 1
             pathCounter = 0
-        XYPathCoords = [pathGen.xPath[pathCounter], pathGen.yPath[pathCounter]]
+        XYPathCoords = [xPath[pathCounter], yPath[pathCounter]]
         pathCounter += 1
-        if pathCounter >= len(pathGen.xPath):
-            pathCounter = 0
-            print(cycleCounter)
-            cycleCounter += 1
-            if cycleCounter > noCycles:
-                break
+
+        # Change this part - no need to go back to start of path, path will contain all reps
+        if pathCounter >= len(xPath):
+            # pathCounter = 0
+            # print(cycleCounter)
+            # cycleCounter += 1
+            # if cycleCounter > noCycles:
+            break
 
         if useMouse:
             XYPathCoords = None

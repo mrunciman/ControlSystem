@@ -38,7 +38,7 @@ class mouseTracker:
         self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
         self.centreX = int(self.canvasX/2)
         self.centreY = int(self.canvasY - mt.tan(mt.pi/6)*(self.canvasX/2))
-        self.radRestrictPix = 16.5/self.resolution #16 mm max contraction
+        self.radRestrictPix = 16/self.resolution #16 mm max contraction
         self.radRestrPixSma = 4/self.resolution #4 mm minimum contraction
         self.mouseEvent = 0
 
@@ -109,7 +109,7 @@ class mouseTracker:
         p4 = [self.xPix - self.num, self.yPix + self.num]
         neighbour = np.array([p1, p2, p3, p4])
         neighPath = mpltPath.Path(neighbour)
-        neighShape = neighbour.reshape((-1, 1, 2))
+        # neighShape = neighbour.reshape((-1, 1, 2))
         # Draw 'handle' box around EE
         # cv2.polylines(self.bkGd, [neighShape], True, (0, 0, 0), 1)
         # Check if position is within neighbourhood on down click
