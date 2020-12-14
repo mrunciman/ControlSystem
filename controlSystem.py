@@ -23,7 +23,7 @@ import traceback
 
 ############################################################
 # Instantiate classes:
-sideLength = 18.911 # mm, from workspace2 model
+sideLength = 19#18.911 # mm, from workspace2 model
 
 kineSolve = kineSolver(sideLength)
 mouseTrack = mouseTracker(sideLength)
@@ -35,13 +35,13 @@ cycleCounter = 0
 
 # Count number of reps 
 halfCycles = 0
-noCycles = 3
+noCycles = 1
 # Use different methods for different paths
 
 xPath = []
 yPath = []
 # Read directly from file for speed?
-with open('paths/raster 2020-11-30 11-00-33 0.5B0.05H18.911EqSide.csv', newline = '') as csvPath:
+with open('paths/PV 2020-12-10 17-03-23 2-17mm 1mm step.csv', newline = '') as csvPath:
     coordReader = csv.reader(csvPath)
     for row in coordReader:
         xPath.append(float(row[0]))
@@ -117,7 +117,7 @@ StepNoL, StepNoR, StepNoT = tStepL, tStepR, tStepT
 
 # Set COM port for each pump
 lhsCOM = 8
-rhsCOM = 6
+rhsCOM = 10
 topCOM = 7
 closeMessage = "Closed"
 try:
@@ -141,21 +141,21 @@ try:
     # Perform calibration:
     while (not calibrated):
         # if not(calibL):
-        [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL, pressL, timeL)
+        # [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL, pressL, timeL)
         # if not(calibR):
         [realStepR, pressR, timeR] = ardIntRHS.listenZero(calibR, pressR, timeR)
         # if not(calibT):
-        [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT, pressT, timeT)
-        print(realStepL, pressL)
+        # [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT, pressT, timeT)
+        # print(realStepL, pressL)
         print(realStepR, pressR)
-        print(realStepT, pressT)
+        # print(realStepT, pressT)
         if (realStepL == "0000LHS"):
             calibL = True
         if (realStepR == "0000RHS"):
             calibR = True
         if (realStepT == "0000TOP"):
             calibT = True
-        if (calibL * calibR * calibT == 1):
+        if (1 * calibR * 1 == 1):
             calibrated = True
             # Send 0s instead of StepNo as signal that calibration done
             ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
