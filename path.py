@@ -1,4 +1,3 @@
-
 import csv
 import numpy as np
 import math as mt
@@ -167,28 +166,99 @@ class pathGenerator:
         # self.yPath = np.array(yListInter)
      
 
-    def verticalMoves(self):
+    def PVMoves(self, numReps):
         """
-        Method to move vertically so that TOP muscle goes from 2 to 17 m contraction with 0.5 mm steps. 
+        Method to move horizontally so that RHS muscle goes from 2 to 17 m contraction with 0.5 mm steps. 
         """
-        # self.relative = "paths/vertical " + self.logTime + " 2-17mm 0.5mm step" + str(self.sideLength) + "EqSide.csv"
-        # self.fileName = os.path.join(self.location, self.relative)
-        currentX = self.sideLength/2
-        maxY = (self.sideLength/2)*mt.tan(mt.pi/3)
-        currentY = maxY
+        currentX = 2
+        currentY = 0
 
         minStrain = 2 #mm
         maxStrain = 17 #mm
-        stepSize = 0.5 #mm
+        stepSize = 1 #mm
         strainRange = maxStrain - minStrain
         numSteps = strainRange/stepSize
 
+        self.relative = "paths/PV " + self.logTime + " 2-17mm " + str(stepSize) + "mm step.csv"
+        self.fileName = os.path.join(self.location, self.relative)
+
+        sixSecSamples = 62
+
+        xListInter = np.array(sixSecSamples*[currentX])
+        yListInter = np.array(sixSecSamples*[currentY])
+        self.xPath = xListInter
+        self.yPath = yListInter
+
+        # Create one repetition of steps going from min to max
         for i in range(int(numSteps)):
             # Increment contraction by decreasing Y value
-            currentY = currentY - stepSize
-            print(currentY, i)
+            currentX = currentX + stepSize
+            xListInter = np.array(sixSecSamples*[currentX])
+            yListInter = np.array(sixSecSamples*[currentY])
+            self.xPath = np.concatenate((self.xPath, xListInter))
+            self.yPath = np.concatenate((self.yPath, yListInter))
+
+        # Repeat path, varying direction between
+        xListInter = self.xPath
+        yListInter = self.yPath
+        for i in range(0, numReps):
+            # If i is odd, add coordinates in order
+            if (i % 2 == 1): 
+                self.xPath = np.concatenate((self.xPath, xListInter))
+                self.yPath = np.concatenate((self.yPath, yListInter))
+                # self.yPath.np.append(yListInter)
+            # If i is even, add coords in reverse order
+            else:
+                self.xPath = np.concatenate((self.xPath, np.flip(xListInter)))
+                self.yPath = np.concatenate((self.yPath, np.flip(yListInter)))
 
 
+    def springPos(self, numReps):
+        """
+        Create path from 2 mm contraction to 17 mm for RHS muscle to follow.
+        """
+        currentY = 0
+        minStrain = 2 #mm
+        maxStrain = 17 #mm
+        sampsMoving = 150
+        sampsPause = 100
+
+        self.relative = "paths/spring " + self.logTime + " 2-17mm " + str(numReps) + "Reps.csv"
+        self.fileName = os.path.join(self.location, self.relative)
+
+        np.linspace(minStrain, maxStrain, sampsMoving)
+
+        # Create different parts of the repetition
+        xListPauseD = np.array(sampsPause*[minStrain])
+        yListPauseD = np.array(sampsPause*[currentY])
+
+        xListUp = np.linspace(minStrain, maxStrain, sampsMoving)
+        yListUp = np.array(sampsMoving*[currentY])
+
+        xListPauseU = np.array(sampsPause*[maxStrain])
+        yListPauseU = np.array(sampsPause*[currentY])
+
+        xListDown = np.flip(xListUp)
+        yListDown = np.array(sampsMoving*[currentY])
+
+        # Put together the parts in order
+        xPauseD = np.concatenate((xListPauseD, xListUp))
+        yPauseD = np.concatenate((yListPauseD, yListUp))
+
+        xUpPause = np.concatenate((xPauseD, xListPauseU))
+        yUpPause = np.concatenate((yPauseD, yListPauseU))
+
+        xOneRep = np.concatenate((xUpPause, xListDown))
+        yOneRep = np.concatenate((yUpPause, yListDown))
+
+        # Repeat "numReps" number of times
+        for i in range(0, numReps):
+            self.xPath = np.concatenate((self.xPath, xOneRep))
+            self.yPath = np.concatenate((self.yPath, yOneRep))
+        
+        # Add a pause at the end
+        self.xPath = np.concatenate((self.xPath, xListPauseD))
+        self.yPath = np.concatenate((self.yPath, yListPauseD))
 
 
 
@@ -216,7 +286,7 @@ class pathGenerator:
 
 
 sideLength = 18.911 # mm, from workspace2 model
-noCycles = 3
+noCycles = 30
 pathGen = pathGenerator(sideLength)
-pathGen.verticalMoves()
-# pathGen.generatePath()
+pathGen.springPos(noCycles)
+pathGen.generatePath()
