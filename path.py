@@ -214,6 +214,52 @@ class pathGenerator:
                 self.yPath = np.concatenate((self.yPath, np.flip(yListInter)))
 
 
+    def springPos(self, numReps):
+        """
+        Create path from 2 mm contraction to 17 mm for RHS muscle to follow.
+        """
+        currentY = 0
+        minStrain = 2 #mm
+        maxStrain = 17 #mm
+        sampsMoving = 150
+        sampsPause = 100
+
+        self.relative = "paths/spring " + self.logTime + " 2-17mm " + str(numReps) + "Reps.csv"
+        self.fileName = os.path.join(self.location, self.relative)
+
+        np.linspace(minStrain, maxStrain, sampsMoving)
+
+        # Create different parts of the repetition
+        xListPauseD = np.array(sampsPause*[minStrain])
+        yListPauseD = np.array(sampsPause*[currentY])
+
+        xListUp = np.linspace(minStrain, maxStrain, sampsMoving)
+        yListUp = np.array(sampsMoving*[currentY])
+
+        xListPauseU = np.array(sampsPause*[maxStrain])
+        yListPauseU = np.array(sampsPause*[currentY])
+
+        xListDown = np.flip(xListUp)
+        yListDown = np.array(sampsMoving*[currentY])
+
+        # Put together the parts in order
+        xPauseD = np.concatenate((xListPauseD, xListUp))
+        yPauseD = np.concatenate((yListPauseD, yListUp))
+
+        xUpPause = np.concatenate((xPauseD, xListPauseU))
+        yUpPause = np.concatenate((yPauseD, yListPauseU))
+
+        xOneRep = np.concatenate((xUpPause, xListDown))
+        yOneRep = np.concatenate((yUpPause, yListDown))
+
+        # Repeat "numReps" number of times
+        for i in range(0, numReps):
+            self.xPath = np.concatenate((self.xPath, xOneRep))
+            self.yPath = np.concatenate((self.yPath, yOneRep))
+        
+        # Add a pause at the end
+        self.xPath = np.concatenate((self.xPath, xListPauseD))
+        self.yPath = np.concatenate((self.yPath, yListPauseD))
 
 
 
@@ -241,7 +287,7 @@ class pathGenerator:
 
 
 sideLength = 18.911 # mm, from workspace2 model
-noCycles = 19
+noCycles = 30
 pathGen = pathGenerator(sideLength)
-pathGen.PVMoves(noCycles)
+pathGen.springPos(noCycles)
 pathGen.generatePath()

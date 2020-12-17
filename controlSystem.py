@@ -35,13 +35,12 @@ cycleCounter = 0
 
 # Count number of reps 
 halfCycles = 0
-noCycles = 1
-# Use different methods for different paths
+noCycles = 30 # Check this with the path used
 
 xPath = []
 yPath = []
 # Read directly from file for speed?
-with open('paths/PV 2020-12-10 17-03-23 2-17mm 1mm step.csv', newline = '') as csvPath:
+with open('paths/spring 2020-12-14 12-07-02 2-17mm 30Reps.csv', newline = '') as csvPath:
     coordReader = csv.reader(csvPath)
     for row in coordReader:
         xPath.append(float(row[0]))
@@ -52,7 +51,7 @@ with open('paths/PV 2020-12-10 17-03-23 2-17mm 1mm step.csv', newline = '') as c
 useMouse = False
 
 if not useMouse:
-    mouseTrack.xCoord = xPath[0]
+    mouseTrack.xCoord = xPath[0] - 1
     mouseTrack.yCoord = yPath[0]
     mouseTrack.xPathCoords = xPath[0: int(len(xPath)/noCycles)]  #Down-sample path here for display
     mouseTrack.yPathCoords = yPath[0: int(len(yPath)/noCycles)]
@@ -177,7 +176,7 @@ try:
         if delayCount < delayLim:
             delayCount += 1
             pathCounter = 0
-        XYPathCoords = [xPath[pathCounter], yPath[pathCounter]]
+        XYPathCoords = [xPath[pathCounter] - 1, yPath[pathCounter]]
         pathCounter += 1
 
         # Change this part - no need to go back to start of path, path will contain all reps
@@ -265,6 +264,7 @@ try:
         # print("Real Pos: ", realStepL, realStepR, realStepT)
         # print(targetL, targetR, targetT)
         # print(tVolL, tVolR, tVolT)
+        print("Real Pos: ", realStepR)
 
     flagStop = mouseTrack.closeTracker()
 
