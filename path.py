@@ -39,10 +39,10 @@ class pathGenerator:
 
     def circlePath(self, numReps):
         noSteps = 360
-        circRadius = 2.5
+        circRadius = 0.6250
         circRad = circRadius #np.concatenate([np.linspace(0, self.circRadius, self.noSteps), np.linspace(self.circRadius, 0, self.noSteps)])
 
-        self.relative = "paths/circPath " + self.logTime + " " + str(circRadius) + "mmRad" + str(self.sideLength) + "EqSide.csv"
+        self.relative = "paths/circPath " + self.logTime + " " + str(circRadius) + "mmRad" + str(numReps) + "Reps.csv"
         self.fileName = os.path.join(self.location, self.relative)
 
         rotStep = np.linspace(0, 2*mt.pi*(1 - 1/(noSteps)), noSteps)
@@ -288,5 +288,5 @@ class pathGenerator:
 sideLength = 18.911 # mm, from workspace2 model
 noCycles = 30
 pathGen = pathGenerator(sideLength)
-pathGen.springPos(noCycles)
+pathGen.circlePath(noCycles)
 pathGen.generatePath()

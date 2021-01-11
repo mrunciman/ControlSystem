@@ -35,13 +35,13 @@ cycleCounter = 0
 
 # Count number of reps 
 halfCycles = 0
-noCycles = 3
+noCycles = 30
 # Use different methods for different paths
 
 xPath = []
 yPath = []
 # Read directly from file for speed?
-with open('paths/raster 2020-11-30 11-00-33 0.5B0.05H18.911EqSide.csv', newline = '') as csvPath:
+with open('paths/circPath 2021-01-06 11-44-05 0.625mmRad30Reps.csv', newline = '') as csvPath:
     coordReader = csv.reader(csvPath)
     for row in coordReader:
         xPath.append(float(row[0]))
@@ -137,7 +137,7 @@ try:
     calibR = False
     calibT = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = False
+    calibrated = True
     # Perform calibration:
     while (not calibrated):
         # if not(calibL):

@@ -38,8 +38,8 @@ class mouseTracker:
         self.canvasY = int(mt.sqrt(3)*(self.canvasX/2))
         self.centreX = int(self.canvasX/2)
         self.centreY = int(self.canvasY - mt.tan(mt.pi/6)*(self.canvasX/2))
-        self.radRestrictPix = 16/self.resolution #16 mm max contraction
-        self.radRestrPixSma = 4/self.resolution #4 mm minimum contraction
+        self.radRestrictPix = 17/self.resolution #16 mm max contraction
+        self.radRestrPixSma = 2.25/self.resolution #4 mm minimum contraction
         self.mouseEvent = 0
 
         # Create background image
