@@ -16,7 +16,7 @@ class ardInterfacer:
         self.ser.port = 'COM%s' % (self.portNumber) 
         self.ser.baudrate = 115200
         self.ser.timeout = 0
-        self.ser.open()
+        # self.ser.open()
     
 
     def connect(self):
@@ -26,6 +26,7 @@ class ardInterfacer:
         on each arduino.
         e.g. top = connect("TOP", 4)
         """
+        self.ser.open()
         message = self.pumpName + "\n"
         reply = ""
         message = message.encode('utf-8')    #Encode message
@@ -66,14 +67,12 @@ class ardInterfacer:
 
 
 
-    def listenReply(self, stepNumber):
+    def listenReply(self):
         x = "e"
         stepPress = b""
         noBytes = self.ser.in_waiting
         # Wait here for reply - source of delay
         while noBytes == 0:
-            # Spam arduino with step number message
-            # self.sendStep(stepNumber)
             noBytes = self.ser.in_waiting
         # Read all bytes in input buffer
         # stepPress = ser.read(noBytes)
@@ -89,6 +88,10 @@ class ardInterfacer:
         stepPress = stepPress.decode('utf-8')
         stepPress = stepPress.split(',')
         # print(stepPress)
+        self.ser.reset_input_buffer()
+        self.ser.reset_output_buffer()
+
+        # IF STEP COUNT = L_'pumpName' STOP AND DISCONNECT ALL
 
         if stepPress == ['']:
             stepCount = "S_Empty" # Change this later to handle dropped values
@@ -96,39 +99,61 @@ class ardInterfacer:
             pumpTime = "T_Empty"
         else:
             stepCount = stepPress[0]
+            if "L " in stepCount: # If "L " in stepPress then limit hit/pressure error
+                print("In from arduino: ", stepPress)
+                raise TypeError('Pressure limit or switch hit in main loop')
             pumpPress = float(stepPress[1])/10
+            if pumpPress < 0:
+                print("Negative pressure: ", stepPress)
+                raise TypeError('Error reading pressure in main loop')
             pumpTime = stepPress[2]
         return stepCount, pumpPress, pumpTime
 
 
-    def listenZero(self, isPumpZero):
-        x = "e"
-        stepPress = b""
-        while self.ser.in_waiting == 0:
-            pass
-        # Check for end character
-        while ord(x) != ord("E"):
-            x = self.ser.read()
-            if x == b"":
-                break
-            elif x == b"E":
-                break
-            stepPress = stepPress + x
-
-        # self.ser.reset_input_buffer()
-        # self.ser.reset_output_buffer()
-        if stepPress == b"":
-            stepCount = "S_Empty" # Change this later to handle dropped values
-            pumpPress = "P_Empty"
-            pumpTime = "T_Empty"
-        else:
-            # print(stepPress)
-            stepPress = stepPress.decode('utf-8')
-            stepPress = stepPress.split(',')
-            stepCount = stepPress[0]
-            pumpPress = float(stepPress[1])/10
-            pumpTime = stepPress[2]
-
+    def listenZero(self, isPumpZero, pressIn, timeIn):
+        # If calibration done, don't wait for arduino
         if (isPumpZero == True):
             stepCount = 0
-        return stepCount, pumpPress, pumpTime
+            pumpPress = pressIn
+            pumpTime = timeIn
+            return stepCount, pumpPress, pumpTime
+        else:
+            x = "e"
+            stepPress = b""
+            while self.ser.in_waiting == 0:
+                pass
+            # Check for end character
+            while ord(x) != ord("E"):
+                x = self.ser.read()
+                if x == b"":
+                    break
+                elif x == b"E":
+                    break
+                stepPress = stepPress + x
+
+            stepPress = stepPress.decode('utf-8')
+            stepPress = stepPress.split(',')
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+
+            if stepPress == b"":
+                stepCount = "S_Empty" # Change this later to handle dropped values
+                pumpPress = "P_Empty"
+                pumpTime = "T_Empty"
+            else:
+                # print(stepPress)
+                stepCount = stepPress[0]
+                if "L " in stepCount: # If "L " in stepPress then limit hit/pressure error
+                    print("In from arduino: ", stepPress)
+                    raise TypeError('Pressure limit or switch hit during calibration')
+                pumpPress = float(stepPress[1])/10
+                if pumpPress < 0:
+                    print("Negative pressure: ", stepPress)
+                    raise TypeError('Error reading pressure during calibration')
+                pumpTime = stepPress[2]
+
+            # if (isPumpZero == True):
+            #     stepCount = 0
+            #     pumpPress = pressIn
+            #     pumpTime = timeIn
+            return stepCount, pumpPress, pumpTime

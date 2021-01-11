@@ -33,8 +33,9 @@ class ardLogger():
         Save stepCount, master cable lengths, pressure values and time 
         from pumps in a list to later save in csv.
         """
+        # Take a list as an argument and unpack that?
         args = locals() # Dictionary of input arguments
-        args.pop('self')
+        args.pop('self') # Take argument 'self' out of dictionary
         self.ardData.append([i for i in args.values()])
         # print(self.ardData[self.numRows])
         # self.numRows = self.numRows + 1
