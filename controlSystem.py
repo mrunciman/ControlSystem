@@ -193,6 +193,9 @@ try:
 
         [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT, XYPathCoords)
         tSecs = tMillis/1000
+        targetZ = 50
+        kineSolve.intersect(targetX + 5, targetY + 5, targetZ)
+
         # Return target cable lengths at target coords and jacobian at current coords
         [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
         # Get cable speeds using Jacobian at current point and calculation of input speed

@@ -121,7 +121,29 @@ class kineSolver:
         self.E = np.array([[0, 0, 0], [self.sideLength, 0, 0], [0.5*self.sideLength, self.sideLength*mt.sin(mt.pi/3), 0]])
         self.E = np.transpose(self.E)
 
-        
+        # Point that the shaft rotates around - COR of universal joint
+        self.leverPoint = np.array([0.5*self.sideLength, 0.5*self.sideLength*mt.tan(mt.pi/6), -10])
+        self.E12 = self.E[:, 1] - self.E[:, 0]
+        self.E13 = self.E[:, 2] - self.E[:, 0]
+        self.nCross = np.cross(self.E12, self.E13)
+        # Normal of end effector plane:
+        self.nPlane = self.nCross/la.norm(self.nCross)
+
+
+
+    def intersect(self, tDesX, tDesY, tDesZ):
+        # cDesX, cDesY, cDesZ,
+        # cExt = np.array([cDesX, cDesY, cDesZ]) # Current 3D position
+        tExt = np.array([tDesX, tDesY, tDesZ]) # Point in 3D where tip should be
+
+        # Vector from lever point to target point
+        PrD = (tExt - self.leverPoint)/la.norm(tExt - self.leverPoint)
+        # How far along PrD the POI is
+        d = np.dot((self.E[:, 0] - tExt), self.nPlane)/np.dot(PrD, self.nPlane)
+        POI = tExt + d*PrD
+        print(POI, -d)
+
+
 
     def cableLengths(self, cX, cY, tX, tY):
         """
