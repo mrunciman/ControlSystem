@@ -41,6 +41,7 @@ class mouseTracker:
         self.radRestrictPix = 17/self.resolution #16 mm max contraction
         self.radRestrPixSma = 2.25/self.resolution #4 mm minimum contraction
         self.mouseEvent = 0
+        self.trueMouseEvent = 0
 
         # Create background image
         self.bkGd = np.zeros(( self.canvasY+1, self.canvasX+1, 3), np.uint8)
@@ -91,6 +92,7 @@ class mouseTracker:
         self.timeDiff = numMillis - self.prevMillis
         self.prevMillis = numMillis
         self.mouseEvent = event
+        self.trueMouseEvent = event
         self.xCallback = x
         self.yCallback = y
         if (self.mouseEvent == cv2.EVENT_LBUTTONDOWN) or (param is not None):
@@ -179,7 +181,7 @@ class mouseTracker:
                         yPrime = self.canvasY - self.yPix
                         self.yCoord = yPrime*self.resolution
                         # Collect data in list to be exported on exit
-                        self.logData.append([self.mouseEvent] + [self.xCoord] + [self.yCoord] + [now] + [self.timeDiff])
+                        self.logData.append([self.trueMouseEvent] + [self.xCoord] + [self.yCoord] + [now] + [self.timeDiff])
         else:
             self.touchDown = False
 

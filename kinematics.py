@@ -37,7 +37,7 @@ class kineSolver:
         self.factV = (self.muscleWidth*(self.L0)**2)/(2*self.numLs)
         self.volFactor = 0.9024 #12.6195/15.066 # Ratio of real volume to theoretical volume
         self.calFactor = 0.01 # % of max vol still in actuator at calibration
-        self.factAng = 1#75/90
+        self.factAng = 1
         self.maxV = self.factV*((mt.pi/2*self.factAng) - \
             mt.cos((mt.pi/2*self.factAng))*mt.sin((mt.pi/2*self.factAng)))/((mt.pi/2*self.factAng)**2)
         # print(self.maxV)
@@ -121,6 +121,9 @@ class kineSolver:
         self.E = np.array([[0, 0, 0], [self.sideLength, 0, 0], [0.5*self.sideLength, self.sideLength*mt.sin(mt.pi/3), 0]])
         self.E = np.transpose(self.E)
 
+        ###################################################################
+        # Extension/Retraction Geometry
+        ###################################################################
         # Point that the shaft rotates around - COR of universal joint
         self.leverPoint = np.array([0.5*self.sideLength, 0.5*self.sideLength*mt.tan(mt.pi/6), -10])
         self.E12 = self.E[:, 1] - self.E[:, 0]
@@ -129,6 +132,12 @@ class kineSolver:
         # Normal of end effector plane:
         self.nPlane = self.nCross/la.norm(self.nCross)
 
+        self.shaftLength = 15 # mm
+        # Set limits on shaft extension
+        # self.minShaftExt = self.shaftLength + 1
+        # self.maxShaftExt = self.shaftLength + 13.5 # Range for spring loaded muscle different
+        self.minExtend = 1
+        self.maxExtend = 13.5 # Range for spring loaded muscle is reduced
 
 
     def intersect(self, tDesX, tDesY, tDesZ):
@@ -141,7 +150,19 @@ class kineSolver:
         # How far along PrD the POI is
         d = np.dot((self.E[:, 0] - tExt), self.nPlane)/np.dot(PrD, self.nPlane)
         POI = tExt + d*PrD
-        print(POI, -d)
+        # print(POI, -d)
+
+        LcE = abs(d) - self.shaftLength
+         # Impose contraction range here
+        if LcE < self.minExtend:
+            LcE = self.minExtend
+        elif LcE > self.maxExtend:
+            LcE = self.maxExtend
+
+        # THIS COMPENSATES FOR self.length2Vol WHERE CABLE IS CONSIDERED PART OF PARALLEL MECHANISM
+        tCableE = self.sideLength - LcE
+
+        return POI[0], POI[1], tCableE
 
 
 
@@ -253,7 +274,7 @@ class kineSolver:
 
 
 
-    ###### MAKE THIS FUNCTION ACCPET CURRENT VOLUME, SO CALC ISN'T REPEATED
+
     def volRate(self, cVol, cCable, tCable):
         """
         Makes linear approximation of volume rate.
@@ -285,7 +306,7 @@ class kineSolver:
 
 
 
-    def freqScale(self, fL, fR, fT):
+    def freqScale(self, fL, fR, fT, fE):
         """
         Returns output compare register values for use in interrupts.
         If any frequency exceeds stepper MAX_FREQ then all are scaled
@@ -309,7 +330,13 @@ class kineSolver:
             fRound = fRound*fSign
             fRound = np.int_(fRound)
 
-        return fRound[0], fRound[1], fRound[2]
+        fSignE = np.sign(fE)
+        if abs(fE) > self.MAX_FREQ:
+            fE = self.MAX_FREQ
+        fRoundE = round(self.timeStep*fE*fSignE)
+        fRoundE = int(fRoundE*fSignE)
+
+        return fRound[0], fRound[1], fRound[2], fRoundE
 
 
 

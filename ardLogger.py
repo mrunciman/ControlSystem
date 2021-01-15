@@ -16,6 +16,7 @@ with open(fileName, mode ='w', newline='') as arduinoLog1:
     ardLog1.writerow(['S_LHS', 'Lc_LHS', 'A_LHS', 'M_LHS', 'P_LHS', 'T_LHS',\
         'S_RHS', 'Lc_RHS', 'A_RHS', 'M_RHS', 'P_RHS', 'T_RHS',\
         'S_TOP', 'Lc_TOP','A_TOP', 'M_TOP', 'P_TOP', 'T_TOP',\
+        'S_EXT', 'Lc_EXT','A_EXT', 'M_EXT', 'P_EXT', 'T_EXT',\
         time.time()])
 
 
@@ -28,7 +29,8 @@ class ardLogger():
 
     def ardLog(self,lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsT,\
         rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsT,\
-        topS, topLc, topA, topMaster, topP, topT):
+        topS, topLc, topA, topMaster, topP, topT,\
+        extS, extLc, extA, extMaster, extP, extT):
         """
         Save stepCount, master cable lengths, pressure values and time 
         from pumps in a list to later save in csv.

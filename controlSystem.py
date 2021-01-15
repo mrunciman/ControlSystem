@@ -18,6 +18,7 @@ from ardLogger import ardLogger
 from streaming import optiTracker
 import csv
 import traceback
+import time
 # import math
 # import random
 
@@ -40,12 +41,14 @@ noCycles = 30
 
 xPath = []
 yPath = []
+zPath = []
 # Read directly from file for speed?
-with open('paths/circPath 2021-01-06 11-44-05 0.625mmRad30Reps.csv', newline = '') as csvPath:
+with open('paths/raster 2020-12-17 18-47-19 0.5B0.05H30Rep.csv', newline = '') as csvPath:
     coordReader = csv.reader(csvPath)
     for row in coordReader:
         xPath.append(float(row[0]))
         yPath.append(float(row[1]))
+        zPath = yPath # TEMPORARY PLACEHOLDER
 
 
 # Use mouse as primary?
@@ -54,8 +57,11 @@ useMouse = False
 if not useMouse:
     mouseTrack.xCoord = xPath[0]
     mouseTrack.yCoord = yPath[0]
+    # mouseTrack.zCoord = zPath[0]
     mouseTrack.xPathCoords = xPath[0: int(len(xPath)/noCycles)]  #Down-sample path here for display
     mouseTrack.yPathCoords = yPath[0: int(len(yPath)/noCycles)]
+    # mouseTrack.zPathCoords = zPath[0: int(len(zPath)/noCycles)]
+
 
 # Initialise variables 
 SAMP_FREQ = 1/kineSolve.timeStep
@@ -65,8 +71,10 @@ flagStop = False
 # the current position doesn't update at same time as target
 currentX = mouseTrack.xCoord
 currentY = mouseTrack.yCoord
+currentZ = 0 #mouseTrack.zCoord
 targetX = mouseTrack.xCoord
 targetY = mouseTrack.yCoord
+targetY = 0 #mouseTrack.zCoord
 toggleDirection = 1
 delayCount = 0
 delayLim = 200
@@ -76,41 +84,49 @@ randoPosition = False
 
 
 # Initialise cable length variables at home position
-cVolL, cVolR, cVolT = 0, 0, 0
+cVolL, cVolR, cVolT, cVolE = 0, 0, 0, 0
 cableL, cableR, cableT = kineSolve.sideLength, kineSolve.sideLength, kineSolve.sideLength
+cableE = kineSolve.sideLength
 [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
+targetE = targetL
 print(targetL, targetR, targetT)
 repJaco = cJaco
 repJpinv = cJpinv
 
 # Set current volume (ignore tSpeed and step values) 
+# cVolE = kineSolve.intersect()
 [cVolL, tSpeedL, tStepL, LcRealL, angleL] = kineSolve.length2Vol(cableL, targetL)
 [cVolR, tSpeedR, tStepR, LcRealR, angleR] = kineSolve.length2Vol(cableR, targetR)
 [cVolT, tSpeedT, tStepT, LcRealT, angleT] = kineSolve.length2Vol(cableT, targetT)
+[cVolE, tSpeedE, tStepE, LcRealE, angleE] = kineSolve.length2Vol(cableE, targetE)
 
 [tVolL, vDotL, dDotL, fStepL, tStepL, tSpeedL, LcRealL, angleL] = kineSolve.volRate(cVolL, cableL, targetL)
 [tVolR, vDotR, dDotR, fStepR, tStepR, tSpeedR, LcRealR, angleR] = kineSolve.volRate(cVolR, cableR, targetR)
 [tVolT, vDotT, dDotT, fStepT, tStepT, tSpeedT, LcRealT, angleT] = kineSolve.volRate(cVolT, cableT, targetT)
-[LStep, RStep, TStep] = kineSolve.freqScale(fStepL, fStepR, fStepT)
-LStep, RStep, TStep = 0, 0, 0
+[tVolE, vDotE, dDotE, fStepE, tStepE, tSpeedE, LcRealE, angleE] = kineSolve.volRate(cVolE, cableE, targetE)
+[LStep, RStep, TStep, EStep] = kineSolve.freqScale(fStepL, fStepR, fStepT, fStepE)
+
+LStep, RStep, TStep, EStep = 0, 0, 0, 0
 
 # Set initial pressure and calibration variables
-pressL, pressR, pressT = 0, 0, 0
-cTimeL, cTimeR, cTimeT = 0, 0, 0
-timeL, timeR, timeT = 0, 0, 0
+pressL, pressR, pressT, pressE = 0, 0, 0, 0
+cTimeL, cTimeR, cTimeT, cTimeE = 0, 0, 0, 0
+timeL, timeR, timeT, timeE = 0, 0, 0, 0
 
 # Current position
 cStepL = tStepL
 cStepR = tStepR
 cStepT = tStepT
-realStepL, realStepR, realStepT = 0, 0, 0
-angleL, angleR, angleT = 0, 0, 0
+cStepE = tStepE
+realStepL, realStepR, realStepT, realStepE = 0, 0, 0, 0
+angleL, angleR, angleT, angleE = 0, 0, 0, 0
 cRealStepL = realStepL
 cRealStepR = realStepR
 cRealStepT = realStepT
-dStepL, dStepR, dStepT  = 0, 0, 0
+cRealStepE = realStepE
+dStepL, dStepR, dStepT, dStepE  = 0, 0, 0, 0
 
-StepNoL, StepNoR, StepNoT = tStepL, tStepR, tStepT
+StepNoL, StepNoR, StepNoT, StepNoE = tStepL, tStepR, tStepT, tStepE
 
 ###############################################################
 # Connect to Arduinos
@@ -119,6 +135,7 @@ StepNoL, StepNoR, StepNoT = tStepL, tStepR, tStepT
 lhsCOM = 8
 rhsCOM = 6
 topCOM = 7
+extCOM = 10
 closeMessage = "Closed"
 try:
     ardIntLHS = ardInterfacer("LHS", lhsCOM)
@@ -130,12 +147,16 @@ try:
     ardIntTOP = ardInterfacer("TOP", topCOM)
     reply = ardIntTOP.connect()
     print(reply)
+    ardIntEXT = ardInterfacer("ext", extCOM)
+    reply = ardIntEXT.connect()
+    print(reply)
 
     #############################################################
     # Calibrate arduinos for zero volume - maintain negative pressure for 4 seconds
     calibL = False
     calibR = False
     calibT = False
+    calibE = False
     # Has the mechanism been calibrated/want to run without calibration?:
     calibrated = True
     # Perform calibration:
@@ -146,25 +167,32 @@ try:
         [realStepR, pressR, timeR] = ardIntRHS.listenZero(calibR, pressR, timeR)
         # if not(calibT):
         [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT, pressT, timeT)
+        # if not(calibT):
+        [realStepE, pressE, timeE] = ardIntEXT.listenZero(calibE, pressE, timeE)
         print(realStepL, pressL)
         print(realStepR, pressR)
         print(realStepT, pressT)
+        print(realStepE, pressE)
         if (realStepL == "0000LHS"):
             calibL = True
         if (realStepR == "0000RHS"):
             calibR = True
         if (realStepT == "0000TOP"):
             calibT = True
-        if (calibL * calibR * calibT == 1):
+        if (realStepE == "0000OUT"):
+            calibE = True
+        if (calibL * calibR * calibT * calibE == 1):
             calibrated = True
             # Send 0s instead of StepNo as signal that calibration done
             ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
                 realStepR, LcRealR, angleR, 0, pressR, timeR,\
-                realStepT, LcRealT, angleT, 0, pressT, timeT)
+                realStepT, LcRealT, angleT, 0, pressT, timeT,\
+                realStepE, LcRealE, angleE, 0, pressE, timeE)
         else:
             ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
                 realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-                realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+                realStepT, LcRealT, angleT, StepNoT, pressT, timeT,\
+                realStepE, LcRealE, angleE, StepNoE, pressE, timeE)
 
 
     ################################################################
@@ -178,6 +206,7 @@ try:
             delayCount += 1
             pathCounter = 0
         XYPathCoords = [xPath[pathCounter], yPath[pathCounter]]
+        XYZPathCoords = [xPath[pathCounter], yPath[pathCounter], zPath[pathCounter]]
         pathCounter += 1
 
         # Change this part - no need to go back to start of path, path will contain all reps
@@ -193,8 +222,8 @@ try:
 
         [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT, XYPathCoords)
         tSecs = tMillis/1000
-        targetZ = 50
-        kineSolve.intersect(targetX + 5, targetY + 5, targetZ)
+        targetZ = 20
+        [targetX, targetY, targetE] = kineSolve.intersect(targetX, targetY, targetZ)
 
         # Return target cable lengths at target coords and jacobian at current coords
         [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
@@ -210,6 +239,7 @@ try:
         [tVolL, vDotL, dDotL, fStepL, tStepL, tSpeedL, LcRealL, angleL] = kineSolve.volRate(cVolL, cableL, scaleTargL)
         [tVolR, vDotR, dDotR, fStepR, tStepR, tSpeedR, LcRealR, angleR] = kineSolve.volRate(cVolR, cableR, scaleTargR)
         [tVolT, vDotT, dDotT, fStepT, tStepT, tSpeedT, LcRealT, angleT] = kineSolve.volRate(cVolT, cableT, scaleTargT)
+        [tVolE, vDotE, dDotE, fStepE, tStepE, tSpeedE, LcRealE, angleE] = kineSolve.volRate(cVolE, cableE, targetE)
         # print("Normal", tStepL, tStepR, tStepT)
 
         # CALCULATE FREQS FROM VALID STEP NUMBER
@@ -217,14 +247,17 @@ try:
         fStepL = (tStepL - cStepL)*SAMP_FREQ
         fStepR = (tStepR - cStepR)*SAMP_FREQ
         fStepT = (tStepT - cStepT)*SAMP_FREQ
-        [LStep, RStep, TStep] = kineSolve.freqScale(fStepL, fStepR, fStepT)
+        fStepE = (tStepE - cStepE)*SAMP_FREQ
+        [LStep, RStep, TStep, EStep] = kineSolve.freqScale(fStepL, fStepR, fStepT, fStepE)
         StepNoL += LStep
         StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
         StepNoT += TStep
+        StepNoE += EStep
         # Send scaled step number to arduinos:
         ardIntLHS.sendStep(StepNoL)
         ardIntRHS.sendStep(StepNoR)
         ardIntTOP.sendStep(StepNoT)
+        ardIntEXT.sendStep(StepNoE)
 
         # Update current position, cable lengths, and volumes as previous targets
         currentX = actualX
@@ -232,20 +265,25 @@ try:
         cableL = scaleTargL
         cableR = scaleTargR
         cableT = scaleTargT
+        cableE = targetE
         cVolL = tVolL
         cVolR = tVolR
         cVolT = tVolT
+        cVolE = tVolE
         cStepL = StepNoL
         cStepR = StepNoR
         cStepT = StepNoT
+        cStepE = StepNoE
         ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
             realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-            realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+            realStepT, LcRealT, angleT, StepNoT, pressT, timeT,\
+            realStepE, LcRealE, angleE, StepNoE, pressE, timeE)
 
 
         [realStepL, pressL, timeL] = ardIntLHS.listenReply()
         [realStepR, pressR, timeR] = ardIntRHS.listenReply()
         [realStepT, pressT, timeT] = ardIntTOP.listenReply()
+        [realStepE, pressE, timeE] = ardIntEXT.listenReply()
         # print("Targ Pos: ", StepNoL, StepNoR, StepNoT)
         # print("Scal Pos: ", StepNoL, StepNoR, StepNoT)
         # print("Real Pos: ", realStepL, realStepR, realStepT)
@@ -295,7 +333,8 @@ finally:
         # Save values gathered from arduinos
         ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
             realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-            realStepT, LcRealT, angleT, StepNoT, pressT, timeT)
+            realStepT, LcRealT, angleT, StepNoT, pressT, timeT,\
+            realStepE, LcRealE, angleE, StepNoE, pressE, timeE)
         ardLogging.ardSave()
         flagStop = mouseTrack.closeTracker()
 
@@ -308,12 +347,21 @@ finally:
         if ardIntTOP.ser.is_open:
             ardIntTOP.sendStep(closeMessage)
 
+        if ardIntEXT.ser.is_open:
+            ardIntEXT.sendStep(closeMessage)
+
+        time.sleep(0.2)
         [realStepL, pressL, timeL] = ardIntLHS.listenReply()
         print(realStepL, pressL, timeL)
+        time.sleep(0.2)
         [realStepR, pressR, timeR] = ardIntRHS.listenReply()
         print(realStepR, pressR, timeR)
+        time.sleep(0.2)
         [realStepT, pressT, timeT] = ardIntTOP.listenReply()
         print(realStepT, pressT, timeT)
+        time.sleep(0.2)
+        [realStepE, pressE, timeE] = ardIntEXT.listenReply()
+        print(realStepE, pressE, timeE)
 
     except NameError:
         reply = ardIntLHS.connect()
@@ -321,6 +369,8 @@ finally:
         reply = ardIntRHS.connect()
         print(reply)
         reply = ardIntTOP.connect()
+        print(reply)
+        reply = ardIntEXT.connect()
         print(reply)
 
     except TypeError as exTE:
@@ -332,3 +382,4 @@ finally:
     ardIntLHS.ser.close()
     ardIntRHS.ser.close()
     ardIntTOP.ser.close()
+    ardIntEXT.ser.close()
