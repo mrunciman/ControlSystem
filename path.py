@@ -14,8 +14,10 @@ class pathGenerator:
         self.triHeight = (triangleSide/2)*mt.tan(mt.pi/3)
         self.circCentX = triangleSide/2
         self.circCentY = (triangleSide/2)*mt.tan(mt.pi/6)
+        self.circCentZ = 0
         self.xPath = np.array([]) # Poor style but works for now
         self.yPath = np.array([])
+        self.zPath = np.array([])
 
         # File name initialisation
         self.location = os.path.dirname(__file__)

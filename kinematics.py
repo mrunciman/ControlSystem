@@ -125,44 +125,47 @@ class kineSolver:
         # Extension/Retraction Geometry
         ###################################################################
         # Point that the shaft rotates around - COR of universal joint
-        self.leverPoint = np.array([0.5*self.sideLength, 0.5*self.sideLength*mt.tan(mt.pi/6), -10])
+        self.leverBaseZ = -30
+        self.leverPoint = np.array([0.5*self.sideLength, 0.5*self.sideLength*mt.tan(mt.pi/6), self.leverBaseZ])
         self.E12 = self.E[:, 1] - self.E[:, 0]
         self.E13 = self.E[:, 2] - self.E[:, 0]
         self.nCross = np.cross(self.E12, self.E13)
-        # Normal of end effector plane:
+        # Normal of end effector / parallel mechanism plane:
         self.nPlane = self.nCross/la.norm(self.nCross)
 
-        self.shaftLength = 15 # mm
+        self.shaftLength = 67.5 # mm
         # Set limits on shaft extension
         # self.minShaftExt = self.shaftLength + 1
         # self.maxShaftExt = self.shaftLength + 13.5 # Range for spring loaded muscle different
-        self.minExtend = 1
-        self.maxExtend = 13.5 # Range for spring loaded muscle is reduced
+        self.minExtend = 0
+        self.maxExtend = 50
 
 
     def intersect(self, tDesX, tDesY, tDesZ):
-        # cDesX, cDesY, cDesZ,
-        # cExt = np.array([cDesX, cDesY, cDesZ]) # Current 3D position
+        #Transform coords to reference base of continuum joint, not parallel mech centre:
+        tDesZ = tDesZ + self.leverBaseZ + self.shaftLength
         tExt = np.array([tDesX, tDesY, tDesZ]) # Point in 3D where tip should be
 
-        # Vector from lever point to target point
-        PrD = (tExt - self.leverPoint)/la.norm(tExt - self.leverPoint)
-        # How far along PrD the POI is
+        # Find vector PrD from lever point to target point
+        baseToPoint = la.norm(tExt - self.leverPoint)
+        PrD = (tExt - self.leverPoint)/baseToPoint
+        # How far along PrD the POI is, from desired point tExt
         d = np.dot((self.E[:, 0] - tExt), self.nPlane)/np.dot(PrD, self.nPlane)
         POI = tExt + d*PrD
         # print(POI, -d)
 
-        LcE = abs(d) - self.shaftLength
-         # Impose contraction range here
+        LcE = abs(baseToPoint) - self.shaftLength
+        # Impose contraction range
         if LcE < self.minExtend:
             LcE = self.minExtend
         elif LcE > self.maxExtend:
             LcE = self.maxExtend
 
         # THIS COMPENSATES FOR self.length2Vol WHERE CABLE IS CONSIDERED PART OF PARALLEL MECHANISM
-        tCableE = self.sideLength - LcE
+        # tCableE = self.sideLength - LcE
+        # stepsPrismatic = int(self.stepsPMM*LcE)
 
-        return POI[0], POI[1], tCableE
+        return POI[0], POI[1], LcE
 
 
 

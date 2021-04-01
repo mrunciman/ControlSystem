@@ -16,7 +16,7 @@ with open(fileName, mode ='w', newline='') as arduinoLog1:
     ardLog1.writerow(['S_LHS', 'Lc_LHS', 'A_LHS', 'M_LHS', 'P_LHS', 'T_LHS',\
         'S_RHS', 'Lc_RHS', 'A_RHS', 'M_RHS', 'P_RHS', 'T_RHS',\
         'S_TOP', 'Lc_TOP','A_TOP', 'M_TOP', 'P_TOP', 'T_TOP',\
-        'S_EXT', 'Lc_EXT','A_EXT', 'M_EXT', 'P_EXT', 'T_EXT',\
+        'S_PRI', 'Lc_PRI','A_PRI', 'M_PRI', 'P_PRI', 'T_PRI',\
         time.time()])
 
 
