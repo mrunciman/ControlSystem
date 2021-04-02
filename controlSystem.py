@@ -48,7 +48,8 @@ with open('paths/circPath 2020-12-17 18-04-48 5mmRad30Reps.csv', newline = '') a
     for row in coordReader:
         xPath.append(float(row[0]))
         yPath.append(float(row[1]))
-        zPath = yPath # TEMPORARY PLACEHOLDER
+        zPath = yPath
+zPath = [k + 1 for k in zPath]
 
 
 # Use mouse as primary?
@@ -57,10 +58,10 @@ useMouse = False
 if not useMouse:
     mouseTrack.xCoord = xPath[0]
     mouseTrack.yCoord = yPath[0]
-    # mouseTrack.zCoord = zPath[0]
+    mouseTrack.zCoord = zPath[0]
     mouseTrack.xPathCoords = xPath[0: int(len(xPath)/noCycles)]  #Down-sample path here for display
     mouseTrack.yPathCoords = yPath[0: int(len(yPath)/noCycles)]
-    # mouseTrack.zPathCoords = zPath[0: int(len(zPath)/noCycles)]
+    mouseTrack.zPathCoords = zPath[0: int(len(zPath)/noCycles)]
 
 
 # Initialise variables 
@@ -159,7 +160,7 @@ try:
     calibT = False
     calibP = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = False
+    calibrated = True
     # Perform calibration:
     while (not calibrated):
         # if not(calibL):
@@ -222,10 +223,12 @@ try:
         if useMouse:
             XYPathCoords = None
 
-        [targetX3D, targetY3D, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT, XYPathCoords)
+        # Ideal target points refer to non-discretised coords on parallel mechanism plane, otherwise, they are discretised.
+        # XYZPathCoords are desired coords in 3D.
+        [targetXideal, targetYideal, targetP] = kineSolve.intersect(XYZPathCoords[0], XYZPathCoords[1], XYZPathCoords[2])
+        [targetX, targetY, tMillis, flagStop] = mouseTrack.iterateTracker(pressL, pressR, pressT,\
+            [targetXideal, targetYideal], XYZPathCoords)
         tSecs = tMillis/1000
-        targetZ = 10
-        [targetX, targetY, targetP] = kineSolve.intersect(targetX3D, targetY3D, targetZ)
 
         # Return target cable lengths at target coords and jacobian at current coords
         [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)

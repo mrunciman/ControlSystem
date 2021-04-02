@@ -32,15 +32,16 @@ class pathGenerator:
         # Convert to lists for improved speed when refereneing individual elements
         self.xPath = self.xPath.tolist()
         self.yPath = self.yPath.tolist()
+        self.zPath = self.zPath.tolist()
 
         with open(self.fileName, mode ='w', newline = '') as pathGenny: 
             pathGenr = csv.writer(pathGenny)
             for j in range(len(self.xPath)):
-                pathGenr.writerow([self.xPath[j], self.yPath[j]])
+                pathGenr.writerow([self.xPath[j], self.yPath[j], self.zPath[j]])
 
 
     def circlePath(self, numReps):
-        noSteps = 360
+        noSteps = 180
         circRadius = 0.6250
         circRad = circRadius #np.concatenate([np.linspace(0, self.circRadius, self.noSteps), np.linspace(self.circRadius, 0, self.noSteps)])
 
@@ -52,6 +53,25 @@ class pathGenerator:
         yPathInter = circRad*np.sin(rotStep) + self.circCentY
         self.xPath = np.tile(xPathInter, numReps)
         self.yPath = np.tile(yPathInter, numReps)
+
+
+    def helixPath(self, numReps):
+        noSteps = 180
+        circRadius = 10
+        bottomHelix = 5
+        topHelix = 35
+        circRad = circRadius #np.concatenate([np.linspace(0, self.circRadius, self.noSteps), np.linspace(self.circRadius, 0, self.noSteps)])
+
+        self.relative = "paths/circPath " + self.logTime + " " + str(circRadius) + "mmRad" + str(numReps) + "Reps.csv"
+        self.fileName = os.path.join(self.location, self.relative)
+
+        rotStep = np.linspace(0, 2*mt.pi*(1 - 1/(noSteps)), noSteps)
+        xPathInter = circRad*np.cos(rotStep) + self.circCentX
+        yPathInter = circRad*np.sin(rotStep) + self.circCentY
+        zPathInter = np.linspace(bottomHelix, topHelix, noSteps)
+        self.xPath = np.tile(xPathInter, numReps)
+        self.yPath = np.tile(yPathInter, numReps)
+        self.zPath = np.tile(zPathInter, numReps)
 
 
     def spiralPath(self, numReps):
@@ -78,6 +98,42 @@ class pathGenerator:
         
         self.xPath = np.tile(xPathInter, numReps)
         self.yPath = np.tile(yPathInter, numReps)
+
+
+
+    def spiralPath2(self, numReps):
+        # This is probably wrong - can only do 360 degrees.
+        # Better would be Archimedes spiral
+        numRots = 5
+        noSteps = 180*numRots
+        circRadius = 10
+        bottomSpiral = 5
+        topSpiral = 35
+
+        fwdRadius = np.linspace(0, circRadius, noSteps)
+        bwdRadius = np.linspace(circRadius, 0, noSteps)
+        fwdPrism = np.linspace(bottomSpiral, topSpiral, noSteps)
+        bwdPrism = np.linspace(topSpiral, bottomSpiral, noSteps)
+        spiralPrism = np.concatenate((fwdPrism, bwdPrism))
+        spiralRad = np.concatenate((fwdRadius, bwdRadius))
+
+        self.relative = "paths/spiralPath " + self.logTime + " " + str(circRadius) + "mmRad" + str(self.sideLength) + "EqSide.csv"
+        self.fileName = os.path.join(self.location, self.relative)
+
+        fwdRot = np.linspace(0, numRots*2*mt.pi*(1 - 1/(noSteps)), noSteps)
+        bwdRot = np.linspace(numRots*2*mt.pi*(1 - 1/(noSteps)), 0, noSteps)
+        rotStep = np.concatenate((fwdRot, bwdRot))
+
+        xPathInter = np.zeros(2*noSteps)
+        yPathInter = np.zeros(2*noSteps)
+        for i in range(len(spiralRad)):
+            xPathInter[i] = spiralRad[i]*np.cos(rotStep[i]) + self.circCentX
+            yPathInter[i] = spiralRad[i]*np.sin(rotStep[i]) + self.circCentY
+        
+        self.xPath = np.tile(xPathInter, numReps)
+        self.yPath = np.tile(yPathInter, numReps)
+        self.zPath = np.tile(spiralPrism, numReps)
+        print(len(self.yPath), len(self.zPath))
 
 
     def rasterScan(self, numReps):
@@ -253,10 +309,12 @@ class pathGenerator:
         xOneRep = np.concatenate((xUpPause, xListDown))
         yOneRep = np.concatenate((yUpPause, yListDown))
 
+        problemI = 0
         # Repeat "numReps" number of times
         for i in range(0, numReps):
             self.xPath = np.concatenate((self.xPath, xOneRep))
             self.yPath = np.concatenate((self.yPath, yOneRep))
+            problemI = i
         
         # Add a pause at the end
         self.xPath = np.concatenate((self.xPath, xListPauseD))
@@ -288,7 +346,7 @@ class pathGenerator:
 
 
 sideLength = 18.911 # mm, from workspace2 model
-noCycles = 30
+noCycles = 3
 pathGen = pathGenerator(sideLength)
-pathGen.circlePath(noCycles)
+pathGen.spiralPath2(noCycles)
 pathGen.generatePath()

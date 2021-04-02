@@ -21,7 +21,7 @@ fileName = os.path.join(location, relative) # USE THIS IN REAL TESTS
 # fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog1: 
     logger1 = csv.writer(posLog1)
-    logger1.writerow(['Event', 'X', 'Y', 'Timestamp', 'ms Since Last'])
+    logger1.writerow(['Event', 'X', 'Y', 'Z', 'Timestamp', 'ms Since Last'])
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 fontscale = 0.5
@@ -78,6 +78,10 @@ class mouseTracker:
         self.Param = None
         self.xPathCoords = []
         self.yPathCoords = []
+        self.zPathCoords = []
+        self.desX = []
+        self.desY = []
+        self.desZ = []
 
 
 
@@ -181,7 +185,7 @@ class mouseTracker:
                         yPrime = self.canvasY - self.yPix
                         self.yCoord = yPrime*self.resolution
                         # Collect data in list to be exported on exit
-                        self.logData.append([self.trueMouseEvent] + [self.xCoord] + [self.yCoord] + [now] + [self.timeDiff])
+                        self.logData.append([self.trueMouseEvent] + [self.desX] + [self.desY] + [self.desZ] + [now] + [self.timeDiff])
         else:
             self.touchDown = False
 
@@ -213,13 +217,16 @@ class mouseTracker:
 
 
 
-    def iterateTracker(self, LHSPress, RHSPress, TOPPress, pathCoords = None):
+    def iterateTracker(self, LHSPress, RHSPress, TOPPress, pathCoords = None, desiredPoints = None):
         # Bind mouseInfo mouse callback function to window
         cv2.setMouseCallback(self.windowName, self.mouseInfo, pathCoords)
         # If path coordinates not specified, use mouse. Path has priority
         if pathCoords is not None:
             self.xCallback = round(pathCoords[0]/self.resolution)
             self.yCallback = self.canvasY - round(pathCoords[1]/self.resolution)
+            self.desX = round(desiredPoints[0]/self.resolution)*self.resolution
+            self.desY = round(desiredPoints[1]/self.resolution)*self.resolution
+            self.desZ = round(desiredPoints[2]/self.resolution)*self.resolution
             self.mouseEvent = cv2.EVENT_MOUSEMOVE
 
         self.drawCables(pathCoords)

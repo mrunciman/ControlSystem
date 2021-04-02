@@ -137,8 +137,8 @@ class kineSolver:
         # Set limits on shaft extension
         # self.minShaftExt = self.shaftLength + 1
         # self.maxShaftExt = self.shaftLength + 13.5 # Range for spring loaded muscle different
-        self.minExtend = 0
-        self.maxExtend = 50
+        self.minExtend = 0.1
+        self.maxExtend = 38.5
 
 
     def intersect(self, tDesX, tDesY, tDesZ):
