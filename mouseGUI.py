@@ -63,6 +63,7 @@ class mouseTracker:
         # Cast coordinates as floats for immutability, which allows tracking
         self.xCoord = float(self.centreX*self.resolution)#
         self.yCoord = float((mt.tan(mt.pi/6))*(self.centreX*self.resolution))#
+        self.zCoord = 0
         self.xPix = int(self.xCoord/self.resolution)#centreX#750#int(self.xCoord/resolution)#
         self.yPix = self.canvasY - int(self.yCoord/self.resolution)#centreY#canvasY-5#
         self.xCallback = self.xPix
@@ -194,7 +195,7 @@ class mouseTracker:
 # Lines below will be in controlSytem loop
 # Call function to instantiate canvas and set callback function
     def createTracker(self):
-        # Create a blank image, a window and bind the function to window
+        # Create a blank image, a window and bind the callback function to window
         cv2.polylines(self.bkGd, [self.vts], True, (0, 0, 0), 1)
         # Initial position of end effector (25, 14.435)
         cv2.circle(self.bkGd, (self.xPix, self.yPix), self.radius, (0, 0, 0), -1)
@@ -235,7 +236,10 @@ class mouseTracker:
             for i in range(len(self.xPathCoords)):
                 bkGdX = round(self.xPathCoords[i]/self.resolution)
                 bkGdY = self.canvasY - round(self.yPathCoords[i]/self.resolution)
-                self.bkGd[bkGdY, bkGdX] = [0, 0, 255]
+                if 0 < bkGdX < self.canvasX+1:
+                    if 0 < bkGdY < self.canvasY+1:
+                        self.bkGd[bkGdY, bkGdX] = [0, 0, 255]
+                
         # Display pressures:
         P_LHS_Text = "LHS Pressure / mbar = {:.2f}".format(LHSPress)
         P_RHS_Text = "RHS Pressure / mbar = {:.2f}".format(RHSPress)

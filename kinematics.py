@@ -318,6 +318,7 @@ class kineSolver:
         fList = np.array([fL, fR, fT])
         fAbs = np.absolute(fList)
         fRound = np.array([0, 0, 0])
+        fRoundE = 0
         # Find OCR and scale if any of the frequency values is non-zero
         if np.any(fList):
             fSign = np.sign(fList)
@@ -336,7 +337,7 @@ class kineSolver:
         fSignE = np.sign(fE)
         if abs(fE) > self.MAX_FREQ:
             fE = self.MAX_FREQ
-        fRoundE = round(self.timeStep*fE*fSignE)
+        fRoundE = round(abs(self.timeStep*fE))
         fRoundE = int(fRoundE*fSignE)
 
         return fRound[0], fRound[1], fRound[2], fRoundE

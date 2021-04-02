@@ -56,16 +56,17 @@ class pathGenerator:
 
 
     def helixPath(self, numReps):
-        noSteps = 180
-        circRadius = 10
+        noSteps = 360
+        numRots = 5
+        circRadius = 5
         bottomHelix = 5
         topHelix = 35
         circRad = circRadius #np.concatenate([np.linspace(0, self.circRadius, self.noSteps), np.linspace(self.circRadius, 0, self.noSteps)])
 
-        self.relative = "paths/circPath " + self.logTime + " " + str(circRadius) + "mmRad" + str(numReps) + "Reps.csv"
+        self.relative = "paths/helixPath " + self.logTime + " " + str(circRadius) + "mmRad" + str(numReps) + "Reps.csv"
         self.fileName = os.path.join(self.location, self.relative)
 
-        rotStep = np.linspace(0, 2*mt.pi*(1 - 1/(noSteps)), noSteps)
+        rotStep = np.linspace(0, numRots*2*mt.pi*(1 - 1/(noSteps)), noSteps)
         xPathInter = circRad*np.cos(rotStep) + self.circCentX
         yPathInter = circRad*np.sin(rotStep) + self.circCentY
         zPathInter = np.linspace(bottomHelix, topHelix, noSteps)
@@ -106,9 +107,9 @@ class pathGenerator:
         # Better would be Archimedes spiral
         numRots = 5
         noSteps = 180*numRots
-        circRadius = 10
-        bottomSpiral = 5
-        topSpiral = 35
+        circRadius = 15
+        bottomSpiral = 2.5
+        topSpiral = 32.5
 
         fwdRadius = np.linspace(0, circRadius, noSteps)
         bwdRadius = np.linspace(circRadius, 0, noSteps)
@@ -117,7 +118,7 @@ class pathGenerator:
         spiralPrism = np.concatenate((fwdPrism, bwdPrism))
         spiralRad = np.concatenate((fwdRadius, bwdRadius))
 
-        self.relative = "paths/spiralPath " + self.logTime + " " + str(circRadius) + "mmRad" + str(self.sideLength) + "EqSide.csv"
+        self.relative = "paths/spiralZ " + self.logTime + " " + str(circRadius) + "mmRad" + str(self.sideLength) + "EqSide.csv"
         self.fileName = os.path.join(self.location, self.relative)
 
         fwdRot = np.linspace(0, numRots*2*mt.pi*(1 - 1/(noSteps)), noSteps)
@@ -133,7 +134,6 @@ class pathGenerator:
         self.xPath = np.tile(xPathInter, numReps)
         self.yPath = np.tile(yPathInter, numReps)
         self.zPath = np.tile(spiralPrism, numReps)
-        print(len(self.yPath), len(self.zPath))
 
 
     def rasterScan(self, numReps):
@@ -346,7 +346,7 @@ class pathGenerator:
 
 
 sideLength = 18.911 # mm, from workspace2 model
-noCycles = 3
+noCycles = 10
 pathGen = pathGenerator(sideLength)
 pathGen.spiralPath2(noCycles)
 pathGen.generatePath()

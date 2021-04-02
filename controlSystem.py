@@ -36,30 +36,29 @@ cycleCounter = 0
 
 # Count number of reps 
 halfCycles = 0
-noCycles = 30
+noCycles = 10
 # Use different methods for different paths
 
 xPath = []
 yPath = []
 zPath = []
-# Read directly from file for speed?
-with open('paths/circPath 2020-12-17 18-04-48 5mmRad30Reps.csv', newline = '') as csvPath:
+# Read path coordinates from file:
+with open('paths/spiralZ 2021-04-02 18-06-51 15mmRad18.911EqSide.csv', newline = '') as csvPath:
     coordReader = csv.reader(csvPath)
     for row in coordReader:
         xPath.append(float(row[0]))
         yPath.append(float(row[1]))
-        zPath = yPath
-zPath = [k + 1 for k in zPath]
+        zPath.append(float(row[2]))
 
-
-# Use mouse as primary?
+# Do you want to use mouse as primary?
 useMouse = False
 
 if not useMouse:
     mouseTrack.xCoord = xPath[0]
     mouseTrack.yCoord = yPath[0]
     mouseTrack.zCoord = zPath[0]
-    mouseTrack.xPathCoords = xPath[0: int(len(xPath)/noCycles)]  #Down-sample path here for display
+    #Down-sample path here for display
+    mouseTrack.xPathCoords = xPath[0: int(len(xPath)/noCycles)]  
     mouseTrack.yPathCoords = yPath[0: int(len(yPath)/noCycles)]
     mouseTrack.zPathCoords = zPath[0: int(len(zPath)/noCycles)]
 
@@ -72,17 +71,15 @@ flagStop = False
 # the current position doesn't update at same time as target
 currentX = mouseTrack.xCoord
 currentY = mouseTrack.yCoord
-currentZ = 0 #mouseTrack.zCoord
+currentZ = mouseTrack.zCoord
 targetX = mouseTrack.xCoord
 targetY = mouseTrack.yCoord
-targetY = 0 #mouseTrack.zCoord
-toggleDirection = 1
+targetZ = mouseTrack.zCoord
+
+# Create delay at start of any test
 delayCount = 0
 delayLim = 200
-
 initialXFlag = False
-randoPosition = False
-
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT, cVolP = 0, 0, 0, 0
@@ -105,9 +102,7 @@ repJpinv = cJpinv
 fStepP = 0
 tStepP = 0
 LcRealP = tStepP/kineSolve.stepsPMM
-
 [LStep, RStep, TStep, PStep] = kineSolve.freqScale(fStepL, fStepR, fStepT, fStepP)
-
 LStep, RStep, TStep, PStep = 0, 0, 0, 0
 
 # Set initial pressure and calibration variables
@@ -160,7 +155,7 @@ try:
     calibT = False
     calibP = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = True
+    calibrated = False
     # Perform calibration:
     while (not calibrated):
         # if not(calibL):
@@ -234,7 +229,7 @@ try:
         [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
         tStepP = int(targetP*kineSolve.stepsPMM)
         LcRealP = tStepP/kineSolve.stepsPMM
-        print(targetL, targetR, targetT, LcRealP)
+        # print(targetL, targetR, targetT, LcRealP)
         # Get cable speeds using Jacobian at current point and calculation of input speed
         [lhsV, rhsV, topV, actualX, actualY] = kineSolve.cableSpeeds(currentX, currentY, targetX, targetY, cJaco, cJpinv, tSecs)
         # Find actual target cable lengths based on scaled cable speeds that result in 'actual' coords
@@ -255,6 +250,7 @@ try:
         StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
         StepNoT += TStep
         StepNoP += PStep
+
         # Send scaled step number to arduinos:
         ardIntLHS.sendStep(StepNoL)
         ardIntRHS.sendStep(StepNoR)
