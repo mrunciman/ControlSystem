@@ -13,11 +13,11 @@ fileName = os.path.join(location, relative) # USE THIS IN REAL TESTS
 # fileName = 'ardLogFile.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as arduinoLog1: 
     ardLog1 = csv.writer(arduinoLog1)
-    ardLog1.writerow(['S_LHS', 'Lc_LHS', 'A_LHS', 'M_LHS', 'P_LHS', 'T_LHS',\
-        'S_RHS', 'Lc_RHS', 'A_RHS', 'M_RHS', 'P_RHS', 'T_RHS',\
-        'S_TOP', 'Lc_TOP','A_TOP', 'M_TOP', 'P_TOP', 'T_TOP',\
-        'S_PRI', 'Lc_PRI','A_PRI', 'M_PRI', 'P_PRI', 'T_PRI',\
-        time.time()])
+    ardLog1.writerow(['S_LHS', 'Lc_LHS', 'A_LHS', 'M_LHS', 'P_LHS', 'P_LMed', 'T_LHS',\
+        'S_RHS', 'Lc_RHS', 'A_RHS', 'M_RHS', 'P_RHS', 'P_RMed', 'T_RHS',\
+        'S_TOP', 'Lc_TOP','A_TOP', 'M_TOP', 'P_TOP', 'P_TMed', 'T_TOP',\
+        'S_PRI', 'Lc_PRI','A_PRI', 'M_PRI', 'P_PRI', 'P_PMed', 'T_PRI',\
+        'C_LHS', 'C_RHS', 'C_TOP', 'C_DEG', time.time()])
 
 
 
@@ -27,10 +27,11 @@ class ardLogger():
         self.ardData = []
         self.numRows = 0
 
-    def ardLog(self,lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsT,\
-        rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsT,\
-        topS, topLc, topA, topMaster, topP, topT,\
-        extS, extLc, extA, extMaster, extP, extT):
+    def ardLog(self,lhsS, lhsLc, lhsA, lhsMaster, lhsP, lhsMed, lhsT,\
+        rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsMed, rhsT,\
+        topS, topLc, topA, topMaster, topP, topMed, topT,\
+        extS, extLc, extA, extMaster, extP, extMed, extT,\
+        lhsC, rhsC, topC, degC):
         """
         Save stepCount, master cable lengths, pressure values and time 
         from pumps in a list to later save in csv.

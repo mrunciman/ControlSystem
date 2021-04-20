@@ -1,5 +1,6 @@
 import csv
 import numpy as np
+from numpy import linalg as la
 import math as mt
 import time
 import os
@@ -103,10 +104,9 @@ class pathGenerator:
 
 
     def spiralPath2(self, numReps):
-        # This is probably wrong - can only do 360 degrees.
-        # Better would be Archimedes spiral
+        # Archimedes spiral
         numRots = 5
-        noSteps = 180*numRots
+        noSteps = 180*numRots # number of steps per 
         circRadius = 15
         bottomSpiral = 2.5
         topSpiral = 32.5
@@ -134,6 +134,82 @@ class pathGenerator:
         self.xPath = np.tile(xPathInter, numReps)
         self.yPath = np.tile(yPathInter, numReps)
         self.zPath = np.tile(spiralPrism, numReps)
+
+
+    def spiralOnCyl(self, numReps):
+        # Archimedes spiral on cylinder surface
+        numRots = 5
+        noSteps = 180*numRots # number of steps per 
+        circRadius = 10
+        bottomSpiral = 2.5
+        topSpiral = 32.5
+        cylRad = 10
+        flatSpirZ = -5
+        spiralCentZ = 20
+        spiralCentY = -5
+        spiralOffsetY = (cylRad + flatSpirZ) + spiralCentY
+
+        fwdRadius = np.linspace(0, circRadius, noSteps)
+        bwdRadius = np.linspace(circRadius, 0, noSteps)
+        fwdPrism = np.linspace(bottomSpiral, topSpiral, noSteps)
+        # bwdPrism = np.linspace(topSpiral, bottomSpiral, noSteps)
+        spiralPrism = flatSpirZ*np.ones(2*noSteps)
+        spiralRad = np.concatenate((fwdRadius, bwdRadius))
+
+        self.relative = "paths/spiralOnCyl " + self.logTime + " " + str(circRadius) + "mmRad" + str(self.sideLength) + "EqSide.csv"
+        self.fileName = os.path.join(self.location, self.relative)
+
+        fwdRot = np.linspace(0, numRots*2*mt.pi*(1 - 1/(noSteps)), noSteps)
+        bwdRot = np.linspace(numRots*2*mt.pi*(1 - 1/(noSteps)), 0, noSteps)
+        rotStep = np.concatenate((fwdRot, bwdRot))
+
+        xPathInter = np.zeros(2*noSteps)
+        yPathInter = np.zeros(2*noSteps)
+        
+        for i in range(len(spiralRad)):
+            xPathInter[i] = spiralRad[i]*np.cos(rotStep[i])
+            yPathInter[i] = spiralRad[i]*np.sin(rotStep[i])
+        
+        self.xPath = np.tile(xPathInter, numReps)
+        self.yPath = np.tile(yPathInter, numReps)
+        self.zPath = np.tile(spiralPrism, numReps)
+
+        # for i = 1:length(xGUIPath)
+        #     Pa(i,:) = dot(Points(i,:), cylAxis(i,:))*cylAxis(i,:);
+        #     Pperp(i,:) = Points(i,:) - Pa(i,:);
+        #     pDirPerp(i,:) = Pperp(i,:)/norm(Pperp(i,:));
+        #     PCyl(i,:) = Pa(i,:) + cylRad*pDirPerp(i,:);
+        # end
+
+        vecLen = len(self.xPath)
+
+        cylAxis = np.empty((vecLen, 3))
+        Points = np.empty((vecLen, 3))
+        Pa = np.empty((vecLen, 3))
+        Pperp = np.empty((vecLen, 3))
+        pDirPerp = np.empty((vecLen, 3))
+        pCyl = np.empty((vecLen, 3))
+
+        cylAxis[:, 0] = np.ones(vecLen)
+        cylAxis[:, 1] = np.zeros(vecLen)
+        cylAxis[:, 2] = np.zeros(vecLen)
+        Points[:, 0] = self.xPath
+        Points[:, 1] = self.yPath
+        Points[:, 2] = self.zPath
+
+        for i in range(vecLen):
+            Pa[i, :] = np.dot(Points[i, :], cylAxis[i, :])*cylAxis[i, :]
+            Pperp[i, :] = Points[i, :] - Pa[i, :]
+            pDirPerp[i, :] = Pperp[i, :]/la.norm(Pperp[i, :])
+            pCyl[i,:] = Pa[i, :] + cylRad*pDirPerp[i, :]
+
+        # self.xPath = np.tile(yPathInter, numReps)
+        # self.yPath = np.tile(spiralPrism, numReps)
+        # self.zPath = np.tile(xPathInter, numReps)
+        self.xPath = pCyl[:, 1] + self.circCentX
+        self.yPath = pCyl[:, 2] + self.circCentY + spiralOffsetY
+        self.zPath = pCyl[:, 0] + spiralCentZ
+
 
 
     def rasterScan(self, numReps):
@@ -348,5 +424,5 @@ class pathGenerator:
 sideLength = 18.911 # mm, from workspace2 model
 noCycles = 10
 pathGen = pathGenerator(sideLength)
-pathGen.spiralPath2(noCycles)
+pathGen.spiralOnCyl(noCycles)
 pathGen.generatePath()

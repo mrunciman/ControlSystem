@@ -30,6 +30,7 @@ kineSolve = kineSolver(sideLength)
 mouseTrack = mouseTracker(sideLength)
 ardLogging = ardLogger()
 opTrack = optiTracker()
+
 ############################################################
 pathCounter = 0
 cycleCounter = 0
@@ -37,6 +38,8 @@ cycleCounter = 0
 # Count number of reps 
 halfCycles = 0
 noCycles = 10
+antiHystSteps = 100
+cDir, targDir = 0, 0
 # Use different methods for different paths
 
 xPath = []
@@ -79,13 +82,22 @@ targetZ = mouseTrack.zCoord
 # Create delay at start of any test
 delayCount = 0
 delayLim = 200
+firstMoveDelay = 0
+firstMoveDivider = 100
 initialXFlag = False
+initPressLogCount = 0
+initPressLogNum = 10
 
 # Initialise cable length variables at home position
 cVolL, cVolR, cVolT, cVolP = 0, 0, 0, 0
 cableL, cableR, cableT = kineSolve.sideLength, kineSolve.sideLength, kineSolve.sideLength
 prismP = 0
-[targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
+targetP = 0
+[targetXideal, targetYideal, targetP] = kineSolve.intersect(targetX, targetY, targetZ)
+currentX = targetXideal
+currentY = targetYideal
+print(targetXideal, targetYideal, targetP)
+[targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetXideal, targetYideal)
 targetP = 0
 print(targetL, targetR, targetT)
 repJaco = cJaco
@@ -107,8 +119,13 @@ LStep, RStep, TStep, PStep = 0, 0, 0, 0
 
 # Set initial pressure and calibration variables
 pressL, pressR, pressT, pressP = 0, 0, 0, 0
-cTimeL, cTimeR, cTimeT, cTimeP = 0, 0, 0, 0
+prevPressL, prevPressR, prevPressT, prevPressP = 0, 0, 0, 0
+pressLMed, pressRMed, pressTMed, pressPMed = 0, 0, 0, 0
 timeL, timeR, timeT, timeP = 0, 0, 0, 0
+prevTimeL, prevTimeR, prevTimeT, prevTimeP = 0, 0, 0, 0
+conLHS, conRHS, conTOP = 0, 0, 0
+dLHS, dRHS, dTOP = 0, 0, 0
+collisionAngle = 1j
 
 # Current position
 cStepL = tStepL
@@ -124,6 +141,7 @@ cRealStepP = realStepP
 dStepL, dStepR, dStepT, dStepP  = 0, 0, 0, 0
 
 StepNoL, StepNoR, StepNoT, StepNoP = tStepL, tStepR, tStepT, tStepP
+initStepNoL, initStepNoR, initStepNoT = 0, 0, 0
 
 ###############################################################
 # Connect to Arduinos
@@ -155,7 +173,7 @@ try:
     calibT = False
     calibP = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = False
+    calibrated = True
     # Perform calibration:
     while (not calibrated):
         # if not(calibL):
@@ -182,15 +200,17 @@ try:
         if (calibL * calibR * calibT * calibP == 1):
             calibrated = True
             # Send 0s instead of StepNo as signal that calibration done
-            ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, timeL,\
-                realStepR, LcRealR, angleR, 0, pressR, timeR,\
-                realStepT, LcRealT, angleT, 0, pressT, timeT,\
-                realStepP, LcRealP, angleP, 0, pressP, timeP)
+            ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, 0, timeL,\
+                realStepR, LcRealR, angleR, 0, pressR, 0, timeR,\
+                realStepT, LcRealT, angleT, 0, pressT, 0, timeT,\
+                realStepP, LcRealP, angleP, 0, pressP, 0, timeP,\
+                conLHS, conRHS, conTOP, collisionAngle)
         else:
-            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
-                realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-                realStepT, LcRealT, angleT, StepNoT, pressT, timeT,\
-                realStepP, LcRealP, angleP, StepNoP, pressP, timeP)
+            ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, pressLMed, timeL,\
+                realStepR, LcRealR, angleR, StepNoR, pressR, pressRMed,  timeR,\
+                realStepT, LcRealT, angleT, StepNoT, pressT, pressTMed, timeT,\
+                realStepP, LcRealP, angleP, StepNoP, pressP, pressPMed, timeP,\
+                conLHS, conRHS, conTOP, collisionAngle)
 
 
     ################################################################
@@ -200,23 +220,23 @@ try:
     mouseTrack.createTracker()
     while(flagStop == False):
 
+        # Stay at first coord for number of cycles
         if delayCount < delayLim:
             delayCount += 1
             pathCounter = 0
+
+        # Go sequentially through path coordinates
         XYPathCoords = [xPath[pathCounter], yPath[pathCounter]]
         XYZPathCoords = [xPath[pathCounter], yPath[pathCounter], zPath[pathCounter]]
         pathCounter += 1
+        pathCounter = 0
 
-        # Change this part - no need to go back to start of path, path will contain all reps
-        if pathCounter >= len(xPath):
-            # pathCounter = 0
-            # print(cycleCounter)
-            # cycleCounter += 1
-            # if cycleCounter > noCycles:
-            break
-
+        # Ignore coords from file if mouse is being used
         if useMouse:
-            XYPathCoords = None
+            XYZPathCoords = None # Problem here - need to get desired point from GUI but kineSolve.intersect() needs argument first
+        # End test when last coords reached
+        elif pathCounter >= len(xPath):
+            break
 
         # Ideal target points refer to non-discretised coords on parallel mechanism plane, otherwise, they are discretised.
         # XYZPathCoords are desired coords in 3D.
@@ -228,7 +248,17 @@ try:
         # Return target cable lengths at target coords and jacobian at current coords
         [targetL, targetR, targetT, cJaco, cJpinv] = kineSolve.cableLengths(currentX, currentY, targetX, targetY)
         tStepP = int(targetP*kineSolve.stepsPMM)
+        tStepP += targDir*antiHystSteps
         LcRealP = tStepP/kineSolve.stepsPMM
+        # For anti-hysteresis in prismatic joint, check target direction and current direction of motion:
+        if tStepP > cStepP:
+            targDir = 1
+        elif tStepP < cStepP:
+            targDir = -1
+        # If stopped, preserve previous direction as target: 
+        elif tStepP == cStepP:
+            targDir = cDir
+
         # print(targetL, targetR, targetT, LcRealP)
         # Get cable speeds using Jacobian at current point and calculation of input speed
         [lhsV, rhsV, topV, actualX, actualY] = kineSolve.cableSpeeds(currentX, currentY, targetX, targetY, cJaco, cJpinv, tSecs)
@@ -246,16 +276,39 @@ try:
         fStepT = (tStepT - cStepT)*SAMP_FREQ
         fStepP = (tStepP - cStepP)*SAMP_FREQ
         [LStep, RStep, TStep, PStep] = kineSolve.freqScale(fStepL, fStepR, fStepT, fStepP)
+        # RStep = dStepR scaled for speed (w rounding differences)
         StepNoL += LStep
-        StepNoR += RStep # RStep = dStepR scaled for speed (w rounding differences)
+        StepNoR += RStep 
         StepNoT += TStep
         StepNoP += PStep
 
-        # Send scaled step number to arduinos:
-        ardIntLHS.sendStep(StepNoL)
-        ardIntRHS.sendStep(StepNoR)
-        ardIntTOP.sendStep(StepNoT)
+        # Reduce speed when making first move after calibration.
+        if firstMoveDelay < firstMoveDivider:
+            firstMoveDelay += 1
+            # RStep = dStepR scaled for speed (w rounding differences)
+            initStepNoL = int(StepNoL*(firstMoveDelay/firstMoveDivider))
+            initStepNoR = int(StepNoR*(firstMoveDelay/firstMoveDivider))
+            initStepNoT = int(StepNoT*(firstMoveDelay/firstMoveDivider))
+            initStepNoP = int(StepNoP*(firstMoveDelay/firstMoveDivider))
+            # Send scaled step number to arduinos:
+            ardIntLHS.sendStep(initStepNoL)
+            ardIntRHS.sendStep(initStepNoR)
+            ardIntTOP.sendStep(initStepNoT)
+        else:
+            # Send scaled step number to arduinos:
+            ardIntLHS.sendStep(StepNoL)
+            ardIntRHS.sendStep(StepNoR)
+            ardIntTOP.sendStep(StepNoT)
         ardIntPRI.sendStep(StepNoP)
+
+        # Calculate median pressure over 10 samples:
+        pressLMed = ardIntLHS.newPressMed(pressL)
+        pressRMed = ardIntRHS.newPressMed(pressR)
+        pressTMed = ardIntTOP.newPressMed(pressT)
+        [conLHS, dLHS] = ardIntLHS.derivPress(timeL, prevTimeL)
+        [conRHS, dRHS] =  ardIntRHS.derivPress(timeR, prevTimeR)
+        [conTOP, dTOP] = ardIntTOP.derivPress(timeT, prevTimeT)
+        collisionAngle = kineSolve.collisionAngle(dLHS, dRHS, dTOP, conLHS, conRHS, conTOP)
 
         # Update current position, cable lengths, and volumes as previous targets
         currentX = actualX
@@ -270,18 +323,28 @@ try:
         cStepR = StepNoR
         cStepT = StepNoT
         cStepP = StepNoP
-        ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
-            realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-            realStepT, LcRealT, angleT, StepNoT, pressT, timeT,\
-            realStepP, LcRealP, angleP, StepNoP, pressP, timeP)
+        cDir = targDir
+        prevPressL = pressL
+        prevPressR = pressR
+        prevPressT = pressT
+        prevTimeL = timeL
+        prevTimeR = timeR
+        prevTimeT = timeT
 
+        # Log values from arduinos
+        ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, pressLMed, timeL,\
+            realStepR, LcRealR, angleR, StepNoR, pressR, pressRMed,  timeR,\
+            realStepT, LcRealT, angleT, StepNoT, pressT, pressTMed, timeT,\
+            realStepP, LcRealP, angleP, StepNoP, pressP, pressPMed, timeP,\
+            conLHS, conRHS, conTOP, collisionAngle)
 
+        # Get current pump position, pressure and times from arduinos
         [realStepL, pressL, timeL] = ardIntLHS.listenReply()
         [realStepR, pressR, timeR] = ardIntRHS.listenReply()
         [realStepT, pressT, timeT] = ardIntTOP.listenReply()
         [realStepP, pressP, timeP] = ardIntPRI.listenReply()
 
-
+    # Close GUI
     flagStop = mouseTrack.closeTracker()
 
 
@@ -306,10 +369,11 @@ finally:
     # Disable pumps and set them to idle state
     try:
         # Save values gathered from arduinos
-        ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, timeL,\
-            realStepR, LcRealR, angleR, StepNoR, pressR, timeR,\
-            realStepT, LcRealT, angleT, StepNoT, pressT, timeT,\
-            realStepP, LcRealP, angleP, StepNoP, pressP, timeP)
+        ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, pressLMed, timeL,\
+            realStepR, LcRealR, angleR, StepNoR, pressR, pressRMed,  timeR,\
+            realStepT, LcRealT, angleT, StepNoT, pressT, pressTMed, timeT,\
+            realStepP, LcRealP, angleP, StepNoP, pressP, pressPMed, timeP,\
+            conLHS, conRHS, conTOP, collisionAngle)
         ardLogging.ardSave()
         flagStop = mouseTrack.closeTracker()
 

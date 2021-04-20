@@ -6,6 +6,7 @@ protection and volume calculation.
 """
 import serial 
 import time
+import numpy as np
 
 class ardInterfacer:
 
@@ -16,7 +17,26 @@ class ardInterfacer:
         self.ser.port = 'COM%s' % (self.portNumber) 
         self.ser.baudrate = 115200
         self.ser.timeout = 0
-        # self.ser.open()
+
+        self.press1 = 0.0
+        self.press2 = 0.0
+        self.press3 = 0.0
+        self.press4 = 0.0
+        self.press5 = 0.0
+        self.press6 = 0.0
+        self.press7 = 0.0
+        self.press8 = 0.0
+        self.press9 = 0.0
+        self.press10 = 0.0
+        self.pressArray = np.array([self.press1, self.press2, self.press3, self.press4, self.press5, \
+            self.press6, self.press7, self.press8, self.press9, self.press10])
+        self.pressMed = np.median(self.pressArray)
+        self.pressMedPrev = self.pressMed
+
+        self.derivThresh = 20
+        self.deriv2Thresh = 30
+
+        self.conDetected = False
     
 
     def connect(self):
@@ -103,10 +123,10 @@ class ardInterfacer:
                 print("In from arduino: ", stepPress)
                 raise TypeError('Pressure limit or switch hit in main loop')
             pumpPress = float(stepPress[1])/10
-            if pumpPress < 0:
-                print("Negative pressure: ", stepPress)
-                raise TypeError('Error reading pressure in main loop')
-            pumpTime = stepPress[2]
+            # if pumpPress < 0:
+            #     print("Negative pressure: ", stepPress)
+            #     raise TypeError('Error reading pressure in main loop')
+            pumpTime = int(stepPress[2])
         return stepCount, pumpPress, pumpTime
 
 
@@ -147,13 +167,50 @@ class ardInterfacer:
                     print("In from arduino: ", stepPress)
                     raise TypeError('Pressure limit or switch hit during calibration')
                 pumpPress = float(stepPress[1])/10
-                if pumpPress < 0:
-                    print("Negative pressure: ", stepPress)
-                    raise TypeError('Error reading pressure during calibration')
-                pumpTime = stepPress[2]
+                # if pumpPress < 0:
+                #     print("Negative pressure: ", stepPress)
+                #     raise TypeError('Error reading pressure during calibration')
+                pumpTime = int(stepPress[2])
 
             # if (isPumpZero == True):
             #     stepCount = 0
             #     pumpPress = pressIn
             #     pumpTime = timeIn
             return stepCount, pumpPress, pumpTime
+
+    def newPressMed(self, newPress):
+        self.press10 = self.press9
+        self.press9 = self.press8
+        self.press8 = self.press7
+        self.press7 = self.press6
+        self.press6 = self.press5
+        self.press5 = self.press4
+        self.press4 = self.press3
+        self.press3 = self.press2
+        self.press2 = self.press1
+        self.press1 = newPress
+        self.pressArray = np.array([self.press1, self.press2, self.press3, self.press4, self.press5,\
+            self.press6, self.press7, self.press8, self.press9, self.press10])
+        self.pressMedPrev = self.pressMed
+        self.pressMed = np.median(self.pressArray)
+
+        return self.pressMed
+
+    def derivPress(self, newTime, prevTime):
+        realTimeStep = (newTime - prevTime)/1000
+        # Prevent div by zero errors / limit noise?
+        if realTimeStep <= 0.001:
+            realTimeStep = 0.001
+        pressDiff = self.pressMed - self.pressMedPrev
+        deriv = pressDiff/realTimeStep
+        deriv2 = deriv/realTimeStep
+        # Check derivatives against heuristically determined threshold values to determine contact:
+        self.conDetected = (abs(deriv) > self.derivThresh) & (abs(deriv2) > self.deriv2Thresh)
+        # 1 means actuator in tension, -1 means compression, 0 means no contact
+        self.conDetected = self.conDetected*np.sign(deriv)
+        return self.conDetected, deriv
+
+    def initPress(self, pressIndex, pressVal):
+        self.pressArray[pressIndex] = float(pressVal)
+
+

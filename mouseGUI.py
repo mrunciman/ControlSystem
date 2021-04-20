@@ -21,7 +21,7 @@ fileName = os.path.join(location, relative) # USE THIS IN REAL TESTS
 # fileName = 'test.csv' # For test purposes
 with open(fileName, mode ='w', newline='') as posLog1: 
     logger1 = csv.writer(posLog1)
-    logger1.writerow(['Event', 'X', 'Y', 'Z', 'Timestamp', 'ms Since Last'])
+    logger1.writerow(['Event', 'X', 'Y', 'Z', 'Timestamp', 'ms Since Last', 'xPOI', 'yPOI'])
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 fontscale = 0.5
@@ -90,12 +90,6 @@ class mouseTracker:
     def mouseInfo(self, event, x, y, flags, param):
         self.Flags = flags
         self.Param = param
-        now = time.time()
-        # Save time since beginning code in ms
-        numMillis = now - self.start #Still in seconds
-        numMillis = numMillis*1000
-        self.timeDiff = numMillis - self.prevMillis
-        self.prevMillis = numMillis
         self.mouseEvent = event
         self.trueMouseEvent = event
         self.xCallback = x
@@ -186,7 +180,8 @@ class mouseTracker:
                         yPrime = self.canvasY - self.yPix
                         self.yCoord = yPrime*self.resolution
                         # Collect data in list to be exported on exit
-                        self.logData.append([self.trueMouseEvent] + [self.desX] + [self.desY] + [self.desZ] + [now] + [self.timeDiff])
+                        self.logData.append([self.trueMouseEvent] + [self.desX] + [self.desY] + [self.desZ] + [now] + [self.timeDiff] + \
+                            [self.xCallback] + [self.yCallback])
         else:
             self.touchDown = False
 
@@ -220,7 +215,7 @@ class mouseTracker:
 
     def iterateTracker(self, LHSPress, RHSPress, TOPPress, pathCoords = None, desiredPoints = None):
         # Bind mouseInfo mouse callback function to window
-        cv2.setMouseCallback(self.windowName, self.mouseInfo, pathCoords)
+        # cv2.setMouseCallback(self.windowName, self.mouseInfo, pathCoords)
         # If path coordinates not specified, use mouse. Path has priority
         if pathCoords is not None:
             self.xCallback = round(pathCoords[0]/self.resolution)
@@ -266,6 +261,12 @@ class mouseTracker:
         # Close on Esc key
         if cv2.waitKey(20) & 0xFF == 27:
             self.stopFlag = True
+        now = time.time()
+        # Save time since beginning code in ms
+        numMillis = now - self.start #Still in seconds
+        numMillis = numMillis*1000
+        self.timeDiff = numMillis - self.prevMillis
+        self.prevMillis = numMillis
         return self.xCoord, self.yCoord, self.timeDiff, self.stopFlag
 
 

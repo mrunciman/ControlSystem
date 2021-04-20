@@ -120,6 +120,9 @@ class kineSolver:
         # LHS, RHS, TOP corner coordinates, corners of equilateral of side S
         self.E = np.array([[0, 0, 0], [self.sideLength, 0, 0], [0.5*self.sideLength, self.sideLength*mt.sin(mt.pi/3), 0]])
         self.E = np.transpose(self.E)
+        # Matrix describing cable direction vectors:
+        self.uCables = np.array([[-0.5*mt.tan(mt.pi/3), -0.5, 0], [0.5*mt.tan(mt.pi/3), -0.5, 0], [0, 1, 0]])
+        self.uCables = np.transpose(self.uCables)
 
         ###################################################################
         # Extension/Retraction Geometry
@@ -178,7 +181,7 @@ class kineSolver:
         structure matrix.
         e.g. [cableL, cableR, cableT, Jplus] = cableLengths(15, 8.6603)
         """
-        # cP is the current position on plane
+        # cP is the current position on plane, tP is target position
         cP = np.array([[cX], [cY], [0]])
         tP = np.array([[tX], [tY], [0]])
 
@@ -207,9 +210,9 @@ class kineSolver:
         u1 = cL[:,0]/cLhsCable    ### FILTER OUT ZERO LENGTH ERRORS
         u2 = cL[:,1]/cRhsCable
         u3 = cL[:,2]/cTopCable
-        u = np.array([u1, u2, u3])
-        u = np.transpose(u)
-        # print(u)
+        self.uCables = np.array([u1, u2, u3])
+        self.uCables = np.transpose(self.uCables)
+        # print(uCables)
         # Find cross products of cable unit vectors and attachment points
         pCrossU1 = np.cross(cPGI[:,0], u1)
         pCrossU2 = np.cross(cPGI[:,1], u2)
@@ -219,12 +222,12 @@ class kineSolver:
         # print(pCrossU)
 
         # Construct Jacobian from transpose of structure matrix
-        cJacobian = np.concatenate((u, pCrossU), axis = 0)
+        cJacobian = np.concatenate((self.uCables, pCrossU), axis = 0)
         # Use only top two rows
         Jplus = np.linalg.pinv(cJacobian[0:2,:])
         # print(cJacobian[0:2,:])
         # rank(A) # Check for singular configuration
-        # If rank(A) < no controlled DOFs, A is singular
+        # If rank(A) < number controlled DOFs, A is singular
 
         return tLhsCable, tRhsCable, tTopCable, cJacobian, Jplus
 
@@ -403,3 +406,23 @@ class kineSolver:
         
 
         return lhsSpeed, rhsSpeed, topSpeed, actX, actY
+
+
+    def collisionAngle(self, dL, dR, dT, conL, conR, conT):
+        # In the case of no contact:
+        if not(conL) and not(conR) and not(conT):
+            collAngle = None
+        else:
+            derivRef = max(np.absolute(np.array([dL, dR, dT])))
+            derRatL = dL/derivRef
+            derRatR = dR/derivRef
+            derRatT = dT/derivRef
+            relTensions = np.array([derRatL, derRatR, derRatT])
+            tensionVects = self.uCables*relTensions
+            resultant = np.array([np.sum(tensionVects[0,:]), np.sum(tensionVects[1,:]), np.sum(tensionVects[2,:])])
+            resDir = resultant/la.norm(resultant)
+            resDirX = resDir[0]
+            resDirY = resDir[1]
+            collAngle = (180/np.pi)*np.arctan2(resDirY, resDirX)
+
+        return collAngle
