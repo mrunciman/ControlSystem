@@ -46,7 +46,7 @@ xPath = []
 yPath = []
 zPath = []
 # Read path coordinates from file:
-with open('paths/spiralZ 2021-04-02 18-06-51 15mmRad18.911EqSide.csv', newline = '') as csvPath:
+with open('paths/spiralOnCyl 2021-04-09 13-01-04 10mmRad18.911EqSide.csv', newline = '') as csvPath:
     coordReader = csv.reader(csvPath)
     for row in coordReader:
         xPath.append(float(row[0]))
@@ -173,7 +173,7 @@ try:
     calibT = False
     calibP = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = True
+    calibrated = False
     # Perform calibration:
     while (not calibrated):
         # if not(calibL):
@@ -229,7 +229,6 @@ try:
         XYPathCoords = [xPath[pathCounter], yPath[pathCounter]]
         XYZPathCoords = [xPath[pathCounter], yPath[pathCounter], zPath[pathCounter]]
         pathCounter += 1
-        pathCounter = 0
 
         # Ignore coords from file if mouse is being used
         if useMouse:
