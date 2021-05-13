@@ -120,7 +120,7 @@ LStep, RStep, TStep, PStep = 0, 0, 0, 0
 # Set initial pressure and calibration variables
 pressL, pressR, pressT, pressP = 0, 0, 0, 0
 prevPressL, prevPressR, prevPressT, prevPressP = 0, 0, 0, 0
-pressLMed, pressRMed, pressTMed, pressPMed = 0, 0, 0, 0
+pressLMed, pressRMed, pressTMed, pressPMed, pressAMed = 0, 0, 0, 0, 0
 timeL, timeR, timeT, timeP = 0, 0, 0, 0
 prevTimeL, prevTimeR, prevTimeT, prevTimeP = 0, 0, 0, 0
 conLHS, conRHS, conTOP = 0, 0, 0
@@ -142,6 +142,8 @@ dStepL, dStepR, dStepT, dStepP  = 0, 0, 0, 0
 
 StepNoL, StepNoR, StepNoT, StepNoP = tStepL, tStepR, tStepT, tStepP
 initStepNoL, initStepNoR, initStepNoT = 0, 0, 0
+realStepA, LcRealA, angleA, StepNoA, pressA, pressAMed, timeA = 0, 0, 0, 0, 0, 0, 0
+pneuPress = 1990
 
 ###############################################################
 # Connect to Arduinos
@@ -151,6 +153,7 @@ lhsCOM = 8
 rhsCOM = 6
 topCOM = 7
 priCOM = 10
+pneuCOM = 15
 closeMessage = "Closed"
 try:
     ardIntLHS = ardInterfacer("LHS", lhsCOM)
@@ -165,6 +168,9 @@ try:
     ardIntPRI = ardInterfacer("PRI", priCOM)
     reply = ardIntPRI.connect()
     print(reply)
+    ardIntPNEU = ardInterfacer("PNEU", pneuCOM)
+    reply = ardIntPNEU.connect()
+    print(reply)
 
     #############################################################
     # Calibrate arduinos for zero volume - maintain negative pressure for 4 seconds
@@ -172,22 +178,21 @@ try:
     calibR = False
     calibT = False
     calibP = False
+    calibA = False
     # Has the mechanism been calibrated/want to run without calibration?:
     calibrated = False
     # Perform calibration:
     while (not calibrated):
-        # if not(calibL):
         [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL, pressL, timeL)
         print(realStepL, pressL)
-        # if not(calibR):
         [realStepR, pressR, timeR] = ardIntRHS.listenZero(calibR, pressR, timeR)
         print(realStepR, pressR)
-        # if not(calibT):
         [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT, pressT, timeT)
         print(realStepT, pressT)
-        # if not(calibT):
         [realStepP, pressP, timeP] = ardIntPRI.listenZero(calibP, pressP, timeP)
         print(realStepP, calibP)
+        [realStepA, pressA, timeA] = ardIntPNEU.listenReply()
+        print(pressA, calibA)
 
         if (realStepL == "0000LHS"):
             calibL = True
@@ -197,19 +202,23 @@ try:
             calibT = True
         if (realStepP == "0200PRI"):
             calibP = True
-        if (calibL * calibR * calibT * calibP == 1):
+        if (pressA >= pneuPress):
+            calibA = True
+        if (calibL * calibR * calibT * calibP * calibA == 1):
             calibrated = True
             # Send 0s instead of StepNo as signal that calibration done
             ardLogging.ardLog(realStepL, LcRealL, angleL, 0, pressL, 0, timeL,\
                 realStepR, LcRealR, angleR, 0, pressR, 0, timeR,\
                 realStepT, LcRealT, angleT, 0, pressT, 0, timeT,\
                 realStepP, LcRealP, angleP, 0, pressP, 0, timeP,\
+                realStepA, LcRealA, angleA, 0, pressA, 0, timeA,\
                 conLHS, conRHS, conTOP, collisionAngle)
         else:
             ardLogging.ardLog(realStepL, LcRealL, angleL, StepNoL, pressL, pressLMed, timeL,\
                 realStepR, LcRealR, angleR, StepNoR, pressR, pressRMed,  timeR,\
                 realStepT, LcRealT, angleT, StepNoT, pressT, pressTMed, timeT,\
                 realStepP, LcRealP, angleP, StepNoP, pressP, pressPMed, timeP,\
+                realStepA, LcRealA, angleA, StepNoA, pressA, pressAMed, timeA,\
                 conLHS, conRHS, conTOP, collisionAngle)
 
 
@@ -294,7 +303,7 @@ try:
             ardIntRHS.sendStep(initStepNoR)
             ardIntTOP.sendStep(initStepNoT)
         else:
-            # Send scaled step number to arduinos:
+            # Send step number to arduinos:
             ardIntLHS.sendStep(StepNoL)
             ardIntRHS.sendStep(StepNoR)
             ardIntTOP.sendStep(StepNoT)
@@ -304,6 +313,7 @@ try:
         pressLMed = ardIntLHS.newPressMed(pressL)
         pressRMed = ardIntRHS.newPressMed(pressR)
         pressTMed = ardIntTOP.newPressMed(pressT)
+        pressAMed = ardIntPNEU.newPressMed(pressA)
         [conLHS, dLHS] = ardIntLHS.derivPress(timeL, prevTimeL)
         [conRHS, dRHS] =  ardIntRHS.derivPress(timeR, prevTimeR)
         [conTOP, dTOP] = ardIntTOP.derivPress(timeT, prevTimeT)
@@ -335,6 +345,7 @@ try:
             realStepR, LcRealR, angleR, StepNoR, pressR, pressRMed,  timeR,\
             realStepT, LcRealT, angleT, StepNoT, pressT, pressTMed, timeT,\
             realStepP, LcRealP, angleP, StepNoP, pressP, pressPMed, timeP,\
+            realStepA, LcRealA, angleA, StepNoA, pressA, pressAMed, timeA,\
             conLHS, conRHS, conTOP, collisionAngle)
 
         # Get current pump position, pressure and times from arduinos
@@ -342,6 +353,7 @@ try:
         [realStepR, pressR, timeR] = ardIntRHS.listenReply()
         [realStepT, pressT, timeT] = ardIntTOP.listenReply()
         [realStepP, pressP, timeP] = ardIntPRI.listenReply()
+        [realStepA, pressA, timeA] = ardIntPNEU.listenReply()
 
     # Close GUI
     flagStop = mouseTrack.closeTracker()
@@ -372,6 +384,7 @@ finally:
             realStepR, LcRealR, angleR, StepNoR, pressR, pressRMed,  timeR,\
             realStepT, LcRealT, angleT, StepNoT, pressT, pressTMed, timeT,\
             realStepP, LcRealP, angleP, StepNoP, pressP, pressPMed, timeP,\
+            realStepA, LcRealA, angleA, StepNoA, pressA, pressAMed, timeA,\
             conLHS, conRHS, conTOP, collisionAngle)
         ardLogging.ardSave()
         flagStop = mouseTrack.closeTracker()
@@ -388,6 +401,9 @@ finally:
         if ardIntPRI.ser.is_open:
             ardIntPRI.sendStep(closeMessage)
 
+        if ardIntPNEU.ser.is_open:
+            ardIntPNEU.sendStep(closeMessage)
+
         time.sleep(0.2)
         [realStepL, pressL, timeL] = ardIntLHS.listenReply()
         print(realStepL, pressL, timeL)
@@ -400,6 +416,9 @@ finally:
         time.sleep(0.2)
         [realStepP, pressP, timeP] = ardIntPRI.listenReply()
         print(realStepP, pressP, timeP)
+        time.sleep(0.2)
+        [realStepA, pressA, timeA] = ardIntPNEU.listenReply()
+        print(realStepA, pressA, timeA)
 
     except NameError:
         reply = ardIntLHS.connect()
@@ -409,6 +428,8 @@ finally:
         reply = ardIntTOP.connect()
         print(reply)
         reply = ardIntPRI.connect()
+        print(reply)
+        reply = ardIntPNEU.connect()
         print(reply)
 
     except TypeError as exTE:
@@ -421,3 +442,4 @@ finally:
     ardIntRHS.ser.close()
     ardIntTOP.ser.close()
     ardIntPRI.ser.close()
+    ardIntPNEU.ser.close()

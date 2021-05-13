@@ -17,6 +17,7 @@ with open(fileName, mode ='w', newline='') as arduinoLog1:
         'S_RHS', 'Lc_RHS', 'A_RHS', 'M_RHS', 'P_RHS', 'P_RMed', 'T_RHS',\
         'S_TOP', 'Lc_TOP','A_TOP', 'M_TOP', 'P_TOP', 'P_TMed', 'T_TOP',\
         'S_PRI', 'Lc_PRI','A_PRI', 'M_PRI', 'P_PRI', 'P_PMed', 'T_PRI',\
+        'S_PNEU', 'Lc_PNEU','A_PNEU', 'M_PNEU', 'P_PNEU', 'P_PnMed', 'T_PNEU',\
         'C_LHS', 'C_RHS', 'C_TOP', 'C_DEG', time.time()])
 
 
@@ -31,6 +32,7 @@ class ardLogger():
         rhsS, rhsLc, rhsA, rhsMaster, rhsP, rhsMed, rhsT,\
         topS, topLc, topA, topMaster, topP, topMed, topT,\
         extS, extLc, extA, extMaster, extP, extMed, extT,\
+        pneuS, pneuLc, pneuA, pneuMaster, pneuP, pneuMed, pneuT,\
         lhsC, rhsC, topC, degC):
         """
         Save stepCount, master cable lengths, pressure values and time 
