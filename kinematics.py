@@ -21,16 +21,20 @@ class kineSolver:
         # Side length of equilateral triangle in mm
         self.sideLength = triangleSide
         # 'Flat' muscle length:
-        self.L0 = 25/(1 - 2/mt.pi)
+        # For 'middle' muscle with 4 subdivisions, L0 = 48.8656399-3 = 45.866
+        self.L0 = 45.866 #25/(1 - 2/mt.pi)
         # Excess length of cable between entry point and muscle, in mm
         # self.Lx = 10
         # Total length of cable in flat/resting state
         # self.Lt = self.L0 + self.Lx + self.sideLength
         # print(Lt)
+
         # Width of hydraulic muscle in mm
+        # TOTAL width of 4-division muscle is 31.25 mm
+        # Equivalent 'square' width equals: 
         self.muscleWidth = 30
         # Number of length subdivisions
-        self.numLs = 3
+        self.numLs = 4
         # Syringe cross sectional area, diameter = 26.5 mm
         self.As = mt.pi*(13.25**2) # mm^2
         # Real volume calc: there are numLs beams of length L0/numLs
