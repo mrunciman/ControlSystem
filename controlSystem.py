@@ -143,7 +143,7 @@ dStepL, dStepR, dStepT, dStepP  = 0, 0, 0, 0
 StepNoL, StepNoR, StepNoT, StepNoP = tStepL, tStepR, tStepT, tStepP
 initStepNoL, initStepNoR, initStepNoT = 0, 0, 0
 realStepA, LcRealA, angleA, StepNoA, pressA, pressAMed, timeA = 0, 0, 0, 0, 0, 0, 0
-pneuPress = 1990
+pneuPress = 1949
 
 ###############################################################
 # Connect to Arduinos
@@ -184,13 +184,13 @@ try:
     # Perform calibration:
     while (not calibrated):
         [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL, pressL, timeL)
-        print(realStepL, pressL)
+        # print(realStepL, pressL)
         [realStepR, pressR, timeR] = ardIntRHS.listenZero(calibR, pressR, timeR)
-        print(realStepR, pressR)
+        # print(realStepR, pressR)
         [realStepT, pressT, timeT] = ardIntTOP.listenZero(calibT, pressT, timeT)
-        print(realStepT, pressT)
+        # print(realStepT, pressT)
         [realStepP, pressP, timeP] = ardIntPRI.listenZero(calibP, pressP, timeP)
-        print(realStepP, calibP)
+        # print(realStepP, calibP)
         [realStepA, pressA, timeA] = ardIntPNEU.listenReply()
         print(pressA, calibA)
 
