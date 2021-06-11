@@ -16,6 +16,7 @@ from kinematics import kineSolver
 from mouseGUI import mouseTracker
 from ardLogger import ardLogger
 from streaming import optiTracker
+from omniStream import omniStreamer
 import csv
 import traceback
 import time
@@ -30,6 +31,11 @@ kineSolve = kineSolver(sideLength)
 mouseTrack = mouseTracker(sideLength)
 ardLogging = ardLogger()
 opTrack = optiTracker()
+omniStream = omniStreamer()
+
+omniStream.connectOmni()
+while True:
+    omniStream.getOmniCoords()
 
 ############################################################
 pathCounter = 0
