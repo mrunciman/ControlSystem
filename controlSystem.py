@@ -38,7 +38,7 @@ cycleCounter = 0
 # Count number of reps 
 halfCycles = 0
 noCycles = 10
-antiHystSteps = 100
+antiHystSteps = 50
 cDir, targDir = 0, 0
 # Use different methods for different paths
 
