@@ -17,6 +17,7 @@ from mouseGUI import mouseTracker
 from ardLogger import ardLogger
 from streaming import optiTracker
 from omniStream import omniStreamer
+# import threading
 import csv
 import traceback
 import time
@@ -34,8 +35,6 @@ opTrack = optiTracker()
 omniStream = omniStreamer()
 
 omniStream.connectOmni()
-while True:
-    omniStream.getOmniCoords()
 
 ############################################################
 pathCounter = 0
@@ -51,6 +50,11 @@ cDir, targDir = 0, 0
 xPath = []
 yPath = []
 zPath = []
+# omniX, omniY, omniZ = 0.0, 0.0, 0.0
+omniStream.getOmniCoords()
+[xMap, yMap, zMap] = omniStream.omniMap()
+
+
 # Read path coordinates from file:
 with open('paths/spiralOnCyl 2021-04-09 13-01-04 10mmRad18.911EqSide.csv', newline = '') as csvPath:
     coordReader = csv.reader(csvPath)
@@ -186,7 +190,7 @@ try:
     calibP = False
     calibA = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = False
+    calibrated = True
     # Perform calibration:
     while (not calibrated):
         [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL, pressL, timeL)
@@ -241,9 +245,12 @@ try:
             pathCounter = 0
 
         # Go sequentially through path coordinates
-        XYPathCoords = [xPath[pathCounter], yPath[pathCounter]]
-        XYZPathCoords = [xPath[pathCounter], yPath[pathCounter], zPath[pathCounter]]
-        pathCounter += 1
+        # XYPathCoords = [xPath[pathCounter], yPath[pathCounter]]
+        # XYZPathCoords = [xPath[pathCounter], yPath[pathCounter], zPath[pathCounter]]
+        omniStream.getOmniCoords()
+        [xMap, yMap, zMap] = omniStream.omniMap()
+        XYZPathCoords = [xMap, yMap, zMap]
+        # pathCounter += 1
 
         # Ignore coords from file if mouse is being used
         if useMouse:

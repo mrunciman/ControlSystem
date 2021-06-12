@@ -247,6 +247,8 @@ class kineSolver:
         # Use lookup tables defined above to find theta angle based on input length
         angle = np.interp(Lc, self.cableLookup, self.theta)
         # Calculate normalised volume of a beam of arbitrary size
+        if angle <= 0:
+            angle = 0.1
         normV = (angle - mt.cos(angle)*mt.sin(angle))/(angle**2)    ### FILTER OUT ANGLE = 0 ERRORS
         # normComp = ((angle*self.factAng) - mt.cos((angle*self.factAng))*mt.sin((angle*self.factAng)))/((angle*self.factAng)**2)
         # print(angle)
