@@ -190,7 +190,7 @@ try:
     calibP = False
     calibA = False
     # Has the mechanism been calibrated/want to run without calibration?:
-    calibrated = True
+    calibrated = False
     # Perform calibration:
     while (not calibrated):
         [realStepL, pressL, timeL] = ardIntLHS.listenZero(calibL, pressL, timeL)

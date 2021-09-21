@@ -110,14 +110,14 @@ class mouseTracker:
         p4 = [self.xPix - self.num, self.yPix + self.num]
         neighbour = np.array([p1, p2, p3, p4])
         neighPath = mpltPath.Path(neighbour)
-        # neighShape = neighbour.reshape((-1, 1, 2))
+        neighShape = neighbour.reshape((-1, 1, 2))
         # Draw 'handle' box around EE
-        # cv2.polylines(self.bkGd, [neighShape], True, (0, 0, 0), 1)
+        cv2.polylines(self.bkGd, [neighShape], True, (0, 0, 0), 1)
         # Check if position is within neighbourhood on down click
         # If inside, move end effector and log.
         touching = neighPath.contains_point([self.xCallback, self.yCallback])
         # Check if point is inside triangle workspace
-        insideTri = self.path.contains_point([self.xPix, self.yPix])
+        insideTri = self.path.contains_point([self.xCallback, self.yCallback])
         radDiff1 = np.array([[self.vt1[0]], [self.vt1[1]]]) - np.array([[self.xCallback], [self.yCallback]])
         radDiff2 = np.array([[self.vt2[0]], [self.vt2[1]]]) - np.array([[self.xCallback], [self.yCallback]])
         radDiff3 = np.array([[self.vt3[0]], [self.vt3[1]]]) - np.array([[self.xCallback], [self.yCallback]])
@@ -226,14 +226,14 @@ class mouseTracker:
             self.mouseEvent = cv2.EVENT_MOUSEMOVE
 
         self.drawCables(pathCoords)
-        if pathCoords is not None:
+        # if pathCoords is not None:
             # Draw Path points if they are given
-            for i in range(len(self.xPathCoords)):
-                bkGdX = round(self.xPathCoords[i]/self.resolution)
-                bkGdY = self.canvasY - round(self.yPathCoords[i]/self.resolution)
-                if 0 < bkGdX < self.canvasX+1:
-                    if 0 < bkGdY < self.canvasY+1:
-                        self.bkGd[bkGdY, bkGdX] = [0, 0, 255]
+            # for i in range(len(self.xPathCoords)):
+            #     bkGdX = round(self.xPathCoords[i]/self.resolution)
+            #     bkGdY = self.canvasY - round(self.yPathCoords[i]/self.resolution)
+            #     if 0 < bkGdX < self.canvasX+1:
+            #         if 0 < bkGdY < self.canvasY+1:
+            #             self.bkGd[bkGdY, bkGdX] = [0, 0, 255]
                 
         # Display pressures:
         P_LHS_Text = "LHS Pressure / mbar = {:.2f}".format(LHSPress)

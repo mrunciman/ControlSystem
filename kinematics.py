@@ -140,7 +140,7 @@ class kineSolver:
         # Set limits on shaft extension
         # self.minShaftExt = self.shaftLength + 1
         # self.maxShaftExt = self.shaftLength + 13.5 # Range for spring loaded muscle different
-        self.minExtend = 0.1
+        self.minExtend = 0.5
         self.maxExtend = 38.5
 
 
@@ -399,8 +399,13 @@ class kineSolver:
 
         # Find actual position after scaled movement:
         if np.any(vEuclidXY): # If tVx or tVy is non-zero
-            actX = cX + ((diffX*vMagScaled)/mt.sqrt(diffX**2 + diffY**2))*timeSecs
-            actY = cY + ((diffY*vMagScaled)/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+            if (mt.sqrt(diffX**2 + diffY**2) != 0):
+                # The two lines below need better non-divide-by-zero
+                actX = cX + ((diffX*vMagScaled)/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+                actY = cY + ((diffY*vMagScaled)/mt.sqrt(diffX**2 + diffY**2))*timeSecs
+            else:
+                actX = cX
+                actY = cY
         else:
             actX = cX
             actY = cY

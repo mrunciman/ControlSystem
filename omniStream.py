@@ -25,7 +25,7 @@ class omniStreamer():
         try:
             self.sock.connect(self.server_addr)
             # self.sock.setblocking(0)
-            self.sock.settimeout(0.1)
+            self.sock.settimeout(0.024)
             print("Connected to {:s}".format(repr(self.server_addr)))
         except AttributeError as ae:
             print("Error creating the socket: {}".format(ae))
@@ -47,9 +47,9 @@ class omniStreamer():
                 if i == "S":
                     if len(numdata)-count >= 4:
                         if numdata[count+3] == "E": #index is count minus one (then plus x for relevant digit), for 0 indexing
-                            self.omniX = numdata[count]
-                            self.omniY = numdata[count+1]
-                            self.omniZ = numdata[count+2]
+                            self.omniX = float(numdata[count])
+                            self.omniY = float(numdata[count+1])
+                            self.omniZ = float(numdata[count+2])
                             # print("x: ", self.omniX, ", y: ", self.omniY, ", z: ", self.omniZ)
                             break
                         else:
@@ -75,11 +75,30 @@ class omniStreamer():
     def omniMap(self):#, xFromOmni, yFromOmni, zFromOmni):
         #Calibrated position in inkwell:
         #  x:  0.00000 , y:  -65.51071 , z:  -88.11420
-        xMapped = abs(float(self.omniX)) # abs jsut for test
-        yMapped = abs(float(self.omniY))
-        zMapped = -float(self.omniZ) # Omni direction is opposite to real direction
-        print("x: ", xMapped, ", y: ", yMapped, ", z: ", zMapped)
-        return float(xMapped), float(yMapped), float(zMapped)
+        # self.omniX = self.omniX + 220
+        # self.omniY = self.omniY + 110
+        # self.omniZ = -(self.omniZ - 125)
+        # if (self.omniX < 0):
+        #     self.omniX = 0
+        # if (self.omniY < 0):
+        #     self.omniY = 0
+        # if (self.omniZ < 0):
+        #     self.omniZ = 0
+
+
+        xMapped = -(self.omniX*((46-(-46))/440)) + 9.455 # abs just for test
+        yMapped = (self.omniY*((55-(-35))/310))  + 5.4591
+        zMapped = -(self.omniZ*((75-30)/215))*2 + 10 # Omni direction is opposite to real direction
+        # if (xMapped < 0):
+        #     xMapped = 0
+        # if (yMapped < 0):
+        #     yMapped = 0
+        if (zMapped < 0):
+            zMapped = 0
+        if (zMapped > 38.5):
+            zMapped = 38.5
+        # print("x: ", xMapped, ", y: ", yMapped, ", z: ", zMapped)
+        return xMapped, yMapped, zMapped
         
         
 
